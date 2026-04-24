@@ -21,7 +21,7 @@ make cov          # pytest with coverage report
 make ci           # lint + format-check + typecheck + cov (mirrors CI)
 
 # Run a single test
-uv run pytest tests/test_users.py::test_get_user_by_id -v
+uv run pytest tests/users/test_users.py::test_get_user_by_id -v
 
 # Database migrations (PostgreSQL workflow)
 make migrate                      # alembic upgrade head
@@ -100,6 +100,8 @@ app/
 - **Default DB**: SQLite (`sqlite+aiosqlite:///./app.db`) for local dev. Switch to PostgreSQL by changing `APP_DATABASE_URL` and setting `APP_DB_CREATE_TABLES_ON_STARTUP=false`, then use Alembic.
 - **Docs visibility**: OpenAPI is hidden (`openapi_url=None`) in any env other than `development` or `test`.
 - **CustomModel**: All Pydantic schemas inherit from `app.core.schemas.CustomModel` (`populate_by_name=True`, `from_attributes=True`).
+- **Schema fields**: Always annotate with `Field(description=..., examples=[...])`. Input schemas also add validation constraints (`min_length`, `max_length`, `ge`, `le`). Output schemas (e.g. `UserRead`, `TokenResponse`) skip constraints. Use `EmailStr` for email fields across all schemas.
+- **Router metadata**: Every route decorator must include `summary`, `description`, and `response_model`. Keep docstrings out of handler functions — put the text in the decorator instead.
 
 ### Optional services
 
@@ -121,6 +123,23 @@ Tests are **integration tests** and depend on real PostgreSQL + Redis. Start dep
 - Session-scoped event loop via `asyncio_default_fixture_loop_scope = "session"` — required because module-level `engine` / Redis pools bind to the first loop.
 - Use `app.dependency_overrides` to swap dependencies rather than monkeypatching internals.
 - Only `app/core/sentry.py` is excluded from coverage (needs live DSN).
+
+Test files mirror the domain structure under `tests/`:
+
+```
+tests/
+├── conftest.py
+├── auth/
+│   └── test_auth.py
+├── core/
+│   ├── test_cache.py
+│   ├── test_middleware.py
+│   └── test_tasks.py
+├── health/
+│   └── test_health.py
+└── users/
+    └── test_users.py
+```
 
 ## Skills
 

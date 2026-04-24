@@ -15,20 +15,23 @@ from app.users.schemas import UserRead
 router = APIRouter()
 
 
-@router.post("/token", response_model=ApiResponse[TokenResponse])
+@router.post(
+    "/token",
+    response_model=ApiResponse[TokenResponse],
+    summary="用户登录",
+    description=(
+        "用户登录，返回 access_token 和 refresh_token。\n\n"
+        "- access_token 有效期较短（默认 30 分钟），用于访问受保护接口\n"
+        "- refresh_token 有效期较长（默认 30 天），用于刷新 access_token\n"
+        "- 同一 IP 每分钟最多请求 10 次，超出返回 429"
+    ),
+)
 @limiter.limit("10/minute")  # 登录接口限流，防止暴力破解
 async def login(
     request: Request,  # slowapi 限流需要获取客户端 IP，必须传入 request
     payload: LoginRequest,
     session: DBSession,
 ) -> ApiResponse[TokenResponse]:
-    """
-    用户登录，返回 access_token 和 refresh_token。
-
-    - access_token 有效期较短（默认 30 分钟），用于访问受保护接口
-    - refresh_token 有效期较长（默认 30 天），用于刷新 access_token
-    - 同一 IP 每分钟最多请求 10 次，超出返回 429
-    """
     try:
         tokens = await AuthService(UserRepository(session)).login(payload.email, payload.password)
     except InvalidCredentials as exc:
@@ -36,19 +39,22 @@ async def login(
     return ApiResponse.ok(tokens)
 
 
-@router.post("/refresh", response_model=ApiResponse[TokenResponse])
+@router.post(
+    "/refresh",
+    response_model=ApiResponse[TokenResponse],
+    summary="刷新令牌",
+    description=(
+        "使用 refresh_token 获取新的 access_token 和 refresh_token。\n\n"
+        "- refresh_token 只能用于此接口，不能用于访问其他受保护接口\n"
+        "- token 无效或已过期时返回 401"
+    ),
+)
 @limiter.limit("20/minute")  # 刷新接口限流
 async def refresh(
     request: Request,  # slowapi 限流需要
     payload: RefreshRequest,
     session: DBSession,
 ) -> ApiResponse[TokenResponse]:
-    """
-    使用 refresh_token 获取新的 access_token 和 refresh_token。
-
-    - refresh_token 只能用于此接口，不能用于访问其他受保护接口
-    - token 无效或已过期时返回 401
-    """
     try:
         tokens = await AuthService(UserRepository(session)).refresh(payload.refresh_token)
     except InvalidToken as exc:
@@ -56,12 +62,15 @@ async def refresh(
     return ApiResponse.ok(tokens)
 
 
-@router.get("/me", response_model=ApiResponse[UserRead])
+@router.get(
+    "/me",
+    response_model=ApiResponse[UserRead],
+    summary="获取当前用户",
+    description=(
+        "获取当前登录用户的信息。\n\n"
+        "- 请求头需携带 `Authorization: Bearer <access_token>`\n"
+        "- token 无效或过期返回 401，账号被禁用返回 403"
+    ),
+)
 async def get_me(current_user: CurrentUser) -> ApiResponse[UserRead]:
-    """
-    获取当前登录用户的信息。
-
-    - 请求头需携带 Authorization: Bearer <access_token>
-    - token 无效或过期返回 401，账号被禁用返回 403
-    """
     return ApiResponse.ok(UserRead.model_validate(current_user))
