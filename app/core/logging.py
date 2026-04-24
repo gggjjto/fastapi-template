@@ -6,7 +6,7 @@ import structlog
 
 
 def configure_logging(log_level: str = "INFO", json_logs: bool = False) -> None:
-    shared_processors = [
+    shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.stdlib.add_log_level,

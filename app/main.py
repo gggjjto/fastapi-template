@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -23,7 +24,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("app.startup", env=settings.env)
 
     if settings.db_create_tables_on_startup:
@@ -67,7 +68,7 @@ def create_app() -> FastAPI:
 
     # 注册全局错误处理器
     register_error_handlers(app)
-    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)  # type: ignore[arg-type]
 
     # 将限流器挂载到 app state，slowapi 从此处读取
     app.state.limiter = limiter
