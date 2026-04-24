@@ -8,7 +8,21 @@ version = "0.1.0"
 description = "A modern FastAPI backend starter template."
 readme = "README.md"
 requires-python = ">=3.12"
+license = { file = "LICENSE" }
 authors = [{ name = "synergy" }]
+keywords = ["fastapi", "template", "starter", "sqlalchemy", "alembic", "jwt", "redis", "arq"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
 dependencies = [
   "fastapi>=0.115.0,<1.0.0",
   "uvicorn[standard]>=0.34.0,<1.0.0",
@@ -20,8 +34,10 @@ dependencies = [
   "structlog>=25.3.0,<26.0.0",
   "email-validator>=2.2.0,<3.0.0",
   "PyJWT>=2.9.0,<3.0.0",
-  "bcrypt>=4.2.0,<5.0.0",
-  "redis[asyncio]>=5.0.0,<6.0.0",
+  "bcrypt>=4.2.0,<6.0.0",
+  # redis 上限锁在 <6：arq<=0.28 仍依赖 redis<6；待 arq 发版支持 redis 6/7 后再放宽
+  # redis>=4.2 已内置 asyncio 支持，无需 [asyncio] extra
+  "redis>=5.0.0,<6.0.0",
   "arq>=0.26.0,<1.0.0",
   "slowapi>=0.1.9,<1.0.0",
   "sentry-sdk[fastapi]>=2.0.0,<3.0.0",
@@ -30,8 +46,9 @@ dependencies = [
 [dependency-groups]
 dev = [
   "httpx>=0.28.0,<1.0.0",
-  "pytest>=8.3.0,<9.0.0",
-  "pytest-asyncio>=0.26.0,<1.0.0",
+  # pytest 8/9 都支持；pytest-asyncio 1.x 对应 pytest 9，保持上限让 Dependabot 可统一升级
+  "pytest>=8.3.0,<10.0.0",
+  "pytest-asyncio>=0.26.0,<2.0.0",
   "ruff>=0.11.0,<1.0.0",
   "mypy>=1.15.0,<2.0.0",
   "pre-commit>=4.2.0,<5.0.0",

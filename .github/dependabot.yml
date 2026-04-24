@@ -16,11 +16,23 @@ updates:
       - "dependencies"
       - "python"
     groups:
-      # 将次要/补丁版本升级合并为一个 PR，减少噪音
+      # pytest 生态需要一起升级，否则 pytest 9 会和 pytest-asyncio 0.x 冲突
+      pytest:
+        patterns:
+          - "pytest"
+          - "pytest-*"
+      # 其余次要/补丁版本合并为一个 PR，减少噪音
       python-minor-patch:
         update-types:
           - "minor"
           - "patch"
+        exclude-patterns:
+          - "pytest"
+          - "pytest-*"
+    ignore:
+      # arq<=0.28 仍依赖 redis<6，屏蔽 redis 的 major 升级直到 arq 兼容
+      - dependency-name: "redis"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
