@@ -122,6 +122,8 @@ Tests are **integration tests** and depend on real PostgreSQL + Redis. Start dep
 - Use `app.dependency_overrides` to swap dependencies rather than monkeypatching internals.
 - Only `app/core/sentry.py` is excluded from coverage (needs live DSN).
 
-## Skill
+## Skills
 
 A `/fastapi-best-practices` skill lives in `skills/fastapi-best-practices/SKILL.md` and `.claude/commands/fastapi-best-practices.md`. Use it when scaffolding new domains, reviewing architecture decisions, choosing between `async def` and `def`, designing dependencies, or adding new endpoints.
+
+A `/dev-workflow` skill lives in `skills/dev-workflow/SKILL.md` and `.claude/commands/dev-workflow.md`. Use it when finishing a set of changes and ready to commit and push — runs quality gates (ruff + mypy), fixes errors, writes conventional commits, and pushes.
