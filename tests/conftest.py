@@ -36,9 +36,9 @@ os.environ.setdefault(
     "test-secret-0123456789abcdef0123456789abcdef",
 )
 
-from app.core.config import get_settings  # noqa: E402
-from app.db.session import reset_db  # noqa: E402
-from app.main import app  # noqa: E402
+from app.core.config import get_settings
+from app.db.session import reset_db
+from app.main import app
 
 _settings = get_settings()
 
