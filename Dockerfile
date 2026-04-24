@@ -11,12 +11,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never
 
 # 复制 uv 二进制（官方静态镜像），避免自行安装
-COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
 # 先只复制 lock 与项目元数据以最大化 Docker 缓存命中
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 
 # 创建仅含运行时依赖（不含 dev 组）的虚拟环境
 RUN --mount=type=cache,target=/root/.cache/uv \

@@ -15,5 +15,5 @@ class ApiResponse[T](CustomModel):
         return cls(data=data)
 
     @classmethod
-    def error(cls, code: int, message: str, data: Any = None) -> "ApiResponse[Any]":
+    def error(cls, code: int, message: str, data: Any = None) -> ApiResponse[Any]:
         return cls(code=code, message=message, data=data)
