@@ -1,0 +1,40 @@
+# 测试专用依赖容器。
+# 与主 docker-compose.yml 隔离：
+#   - 独立 project name，避免与 dev 容器冲突
+#   - 独立端口（5433 / 6380），避免与本机其它 PG/Redis 冲突
+#   - 使用 tmpfs，测试数据不持久化，容器重启即净
+#
+# 启动：  make test-up
+# 关闭：  make test-down
+
+name: fastapi-template-test
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s

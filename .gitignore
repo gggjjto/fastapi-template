@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+.env
+.DS_Store
+
+# Claude Code 本地个人设置（不含共享的 slash commands）
+.claude/settings.local.json
+
+# Editor / IDE
+.idea/
+.vscode/

@@ -1,0 +1,50 @@
+# 版本控制
+.git
+.gitignore
+.gitattributes
+
+# 虚拟环境 / 构建产物
+.venv
+venv
+env
+**/__pycache__
+*.py[cod]
+*.egg-info
+dist
+build
+
+# 缓存
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+coverage.xml
+htmlcov
+
+# 本地数据库 / 数据文件
+*.db
+*.sqlite3
+*.sqlite
+
+# 环境变量与密钥（绝不进入镜像）
+.env
+.env.*
+!.env.example
+
+# IDE / 编辑器
+.vscode
+.idea
+.cursor
+.claude
+*.swp
+*.swo
+.DS_Store
+
+# 文档与 CI（保留 README.md，pyproject.toml 构建需要它）
+.github
+docs
+CLAUDE.md
+skills
+
+# 测试
+tests
