@@ -11,7 +11,9 @@ from app.core.schemas import CustomModel
 class UserCreate(CustomModel):
     email: EmailStr = Field(description="用户邮箱，全局唯一", examples=["user@example.com"])
     full_name: str = Field(min_length=1, max_length=255, description="用户姓名", examples=["张三"])
-    password: str = Field(min_length=8, max_length=128, description="密码，8~128 位", examples=["Password123!"])
+    password: str = Field(
+        min_length=8, max_length=128, description="密码，8~128 位", examples=["Password123!"]
+    )
 
 
 class UserRead(CustomModel):

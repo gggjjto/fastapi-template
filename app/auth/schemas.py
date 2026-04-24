@@ -7,7 +7,9 @@ from app.core.schemas import CustomModel
 
 class LoginRequest(CustomModel):
     email: EmailStr = Field(description="用户邮箱", examples=["user@example.com"])
-    password: str = Field(min_length=8, max_length=128, description="用户密码", examples=["Password123!"])
+    password: str = Field(
+        min_length=8, max_length=128, description="用户密码", examples=["Password123!"]
+    )
 
 
 class RefreshRequest(CustomModel):

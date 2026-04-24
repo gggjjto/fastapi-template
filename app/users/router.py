@@ -64,9 +64,7 @@ async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[
     response_model=ApiResponse[UserRead],
     summary="查询用户",
     description=(
-        "根据 ID 查询单个用户。\n\n"
-        "- `user_id` 必须是合法的 UUID 格式\n"
-        "- 用户不存在时返回 404"
+        "根据 ID 查询单个用户。\n\n- `user_id` 必须是合法的 UUID 格式\n- 用户不存在时返回 404"
     ),
 )
 async def get_user(user: User = Depends(valid_user_id)) -> ApiResponse[UserRead]:
