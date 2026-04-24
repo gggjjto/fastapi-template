@@ -13,8 +13,12 @@ cp .env.example .env
 # Development
 make dev          # uvicorn with --reload
 make lint         # ruff check
+make lint-fix     # ruff check --fix (auto-fix)
 make format       # ruff format
+make typecheck    # mypy app
 make test         # pytest (all tests)
+make cov          # pytest with coverage report
+make ci           # lint + format-check + typecheck + cov (mirrors CI)
 
 # Run a single test
 uv run pytest tests/test_users.py::test_get_user_by_id -v
@@ -25,6 +29,10 @@ make revision m="describe change" # autogenerate migration (files named YYYY-MM-
 
 # Background worker (requires Redis)
 uv run arq app.worker.WorkerSettings
+
+# Test containers
+make test-up      # start PostgreSQL (5433) + Redis (6380) for tests
+make test-down    # stop and remove test containers
 
 # Full local stack (API + PostgreSQL + Redis)
 docker compose up

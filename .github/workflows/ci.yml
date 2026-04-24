@@ -13,7 +13,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
-  UV_VERSION: "0.5.11"
+  UV_VERSION: "latest"
   # 使 uv 在 CI 中静默且稳定
   UV_NO_PROGRESS: "1"
   UV_SYSTEM_PYTHON: "1"
@@ -67,15 +67,10 @@ jobs:
 
       - name: Run mypy
         run: uv run mypy app
-        continue-on-error: true  # 初期允许失败；代码基完全符合 strict 后去掉
 
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12"]
 
     # 集成测试依赖真实 PostgreSQL + Redis
     services:
@@ -122,7 +117,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Set up Python
-        run: uv python install ${{ matrix.python-version }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: uv sync --dev --frozen
@@ -134,7 +129,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.python-version }}
+          name: coverage
           path: coverage.xml
           if-no-files-found: ignore
 
