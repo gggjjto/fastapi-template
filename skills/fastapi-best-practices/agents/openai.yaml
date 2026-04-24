@@ -1,4 +1,0 @@
-interface:
-  display_name: "FastAPI Best Practices"
-  short_description: "Apply proven FastAPI architecture patterns."
-  default_prompt: "Use $fastapi-best-practices to scaffold, review, or refactor a FastAPI backend using domain-oriented structure, safe async boundaries, strong dependency patterns, and maintainable database conventions."
