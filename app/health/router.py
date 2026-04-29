@@ -29,11 +29,18 @@ async def live() -> ApiResponse[dict[str, str]]:
     response_model=ApiResponse[dict[str, str]],
     summary="就绪探针",
     description=(
-        "Readiness Probe：执行 `SELECT 1` 验证数据库连接是否正常。\n\n"
+        "Readiness Probe：执行 `SELECT 1` 验证数据库连接；若启用 Redis 则同时执行 PING。\n\n"
         "Kubernetes 通过此接口判断容器是否可以接收流量。"
-        "数据库不可达时返回 500。"
+        "数据库或 Redis 不可达时返回 500。"
     ),
 )
 async def ready(session: DBSession) -> ApiResponse[dict[str, str]]:
     await session.execute(text("SELECT 1"))
-    return ApiResponse.ok({"status": "ready", "database": "ok"})
+    result: dict[str, str] = {"status": "ready", "database": "ok"}
+    if settings.redis_url:
+        from app.db.redis import get_redis
+
+        redis = await get_redis()
+        await redis.ping()
+        result["redis"] = "ok"
+    return ApiResponse.ok(result)

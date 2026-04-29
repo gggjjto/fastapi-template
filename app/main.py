@@ -7,6 +7,7 @@ from typing import Any
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
@@ -83,6 +84,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(RequestIDMiddleware)
+    # GZipMiddleware 最外层：在所有中间件处理完成后压缩响应体再发送给客户端
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:
