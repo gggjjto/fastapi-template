@@ -1,24 +1,19 @@
-<div align="center">
-
 # FastAPI Template
 
 **一个现代化、开箱即用、面向真实业务的 FastAPI 后端项目模板。**
 
-[![CI](https://github.com/gggjjto/fastapi-template/actions/workflows/ci.yml/badge.svg)](https://github.com/gggjjto/fastapi-template/actions/workflows/ci.yml)
-[![Docker](https://github.com/gggjjto/fastapi-template/actions/workflows/docker.yml/badge.svg)](https://github.com/gggjjto/fastapi-template/actions/workflows/docker.yml)
-[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#贡献)
-
-</div>
+[CI](https://github.com/gggjjto/fastapi-template/actions/workflows/ci.yml)
+[Python](https://www.python.org/downloads/)
+[License: MIT](./LICENSE)
+[Ruff](https://github.com/astral-sh/ruff)
+[uv](https://github.com/astral-sh/uv)
+[PRs Welcome](#贡献)
 
 ---
 
 ## 简介
 
-`fastapi-template` 是一个**按领域（domain-oriented）组织**的 FastAPI 后端脚手架，开箱提供生产环境常见基础设施：JWT 认证、Redis 缓存、Arq 任务队列、结构化日志、全局异常处理、限流、健康探针、统一响应格式，以及完整的测试 / CI / Docker 发布流水线。
+`fastapi-template` 是一个**按领域（domain-oriented）组织**的 FastAPI 后端脚手架，开箱提供生产环境常见基础设施：JWT 认证、Redis 缓存、Arq 任务队列、结构化日志、全局异常处理、限流、健康探针、统一响应格式，以及完整的测试与 CI 流程。
 
 适合用作：
 
@@ -59,27 +54,31 @@
 - **健康探针**：`/live`、`/ready`（用于 K8s liveness / readiness）
 - **可配置文档可见性**：非 dev/test 环境自动隐藏 OpenAPI
 - **集成测试**：直接对接真实 PostgreSQL + Redis，不做 mock
-- **完整 CI/CD**：lint / type-check / test / migrations / docker build & publish
+- **完整 CI**：lint / format-check / type-check / test / migrations / docker build 验证
 - **多阶段 Dockerfile**：基于 `uv`，运行阶段非 root + healthcheck
 
 ## 技术栈
 
-| 领域 | 选型 |
-|---|---|
-| Web 框架 | FastAPI, Pydantic v2 |
-| ORM / 迁移 | SQLAlchemy 2.0 (async), Alembic |
-| 数据库 | PostgreSQL（生产） / SQLite（快速启动） |
-| 缓存 / 队列 | Redis, Arq |
-| 认证 | PyJWT, bcrypt |
-| 日志 | structlog |
-| 限流 | slowapi |
-| 错误追踪 | sentry-sdk |
-| 包管理 | [uv](https://github.com/astral-sh/uv) |
-| Lint / Format | ruff |
-| 类型检查 | mypy |
-| 测试 | pytest, pytest-asyncio, httpx, asgi-lifespan |
-| 容器 | Docker, docker-compose |
-| CI/CD | GitHub Actions, Dependabot, GHCR |
+
+| 领域            | 选型                                           |
+| ------------- | -------------------------------------------- |
+| Web 框架        | FastAPI, Pydantic v2                         |
+| ORM / 迁移      | SQLAlchemy 2.0 (async), Alembic              |
+| 数据库           | PostgreSQL（生产） / SQLite（快速启动）                |
+| 缓存 / 队列       | Redis, Arq                                   |
+| 认证            | PyJWT, bcrypt                                |
+| 日志            | structlog                                    |
+| 限流            | slowapi                                      |
+| 错误追踪          | sentry-sdk                                   |
+| 包管理           | [uv](https://github.com/astral-sh/uv)        |
+| Lint / Format | ruff                                         |
+| 类型检查          | mypy                                         |
+| 测试            | pytest, pytest-asyncio, httpx, asgi-lifespan |
+| 容器            | Docker, docker-compose                       |
+| CI/CD         | GitHub Actions, Dependabot                   |
+
+
+实践参考：[zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)。该仓库示例使用 `src/` 作为应用目录；本模板使用 `app/`，语义等价。面向 AI 的精简规则也可参考其 [AGENTS.md](https://github.com/zhanymkanov/fastapi-best-practices/blob/master/AGENTS.md)，本项目规则以 `.claude/rules/` 为准。
 
 ## 快速开始
 
@@ -103,9 +102,9 @@ uv run uvicorn app.main:app --reload
 
 打开：
 
-- API: <http://127.0.0.1:8000>
-- Swagger UI: <http://127.0.0.1:8000/docs>
-- ReDoc: <http://127.0.0.1:8000/redoc>
+- API: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
 ### 完整本地栈（PostgreSQL + Redis，容器化）
 
@@ -169,26 +168,29 @@ app/
 - **异常分层**：Service 抛 `DomainError` 子类，Dependencies 直接抛 `HTTPException`，Router 负责把领域异常转为 HTTP 响应。
 - **Pydantic 基类**：所有 Schema 继承 `CustomModel`（`populate_by_name=True`, `from_attributes=True`）。
 - **文档可见性**：非 `development` / `test` 环境自动隐藏 OpenAPI（`openapi_url=None`）。
+- **响应取舍**：统一 `ApiResponse[T]` 会让 FastAPI 按 `response_model` 再做一次响应校验；模板优先保证响应结构一致，性能极敏感接口可单独评估。
 
 ## 配置
 
 所有配置通过 `.env` 文件或环境变量传入，统一使用 `APP_` 前缀。常用项：
 
-| 变量 | 默认值 | 说明 |
-|---|---|---|
-| `APP_ENV` | `development` | `development` / `staging` / `production` / `test` |
-| `APP_DEBUG` | `true` | 调试模式 |
-| `APP_DATABASE_URL` | `sqlite+aiosqlite:///./app.db` | 数据库连接 |
-| `APP_DB_CREATE_TABLES_ON_STARTUP` | `true` | 启动时自动建表（SQLite 使用；PG 请用 Alembic） |
-| `APP_JWT_SECRET` | ⚠️ 改掉 | 建议 `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `APP_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | access token 有效期 |
-| `APP_REFRESH_TOKEN_EXPIRE_DAYS` | `30` | refresh token 有效期 |
-| `APP_REDIS_URL` | *(空)* | 留空则关闭 Redis、缓存、Arq |
-| `APP_SENTRY_DSN` | *(空)* | 留空则关闭 Sentry |
-| `APP_LOG_JSON` | `false` | 结构化日志输出为 JSON |
-| `APP_ALLOWED_ORIGINS` | `["*"]` | CORS 白名单，逗号分隔 |
 
-完整列表见 [`app/core/config.py`](./app/core/config.py) 与 [`.env.example`](./.env.example)。
+| 变量                                | 默认值                            | 说明                                                            |
+| --------------------------------- | ------------------------------ | ------------------------------------------------------------- |
+| `APP_ENV`                         | `development`                  | `development` / `staging` / `production` / `test`             |
+| `APP_DEBUG`                       | `true`                         | 调试模式                                                          |
+| `APP_DATABASE_URL`                | `sqlite+aiosqlite:///./app.db` | 数据库连接                                                         |
+| `APP_DB_CREATE_TABLES_ON_STARTUP` | `true`                         | 启动时自动建表（SQLite 使用；PG 请用 Alembic）                              |
+| `APP_JWT_SECRET`                  | ⚠️ 改掉                          | 建议 `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `APP_ACCESS_TOKEN_EXPIRE_MINUTES` | `30`                           | access token 有效期                                              |
+| `APP_REFRESH_TOKEN_EXPIRE_DAYS`   | `30`                           | refresh token 有效期                                             |
+| `APP_REDIS_URL`                   | *(空)*                          | 留空则关闭 Redis、缓存、Arq                                            |
+| `APP_SENTRY_DSN`                  | *(空)*                          | 留空则关闭 Sentry                                                  |
+| `APP_LOG_JSON`                    | `false`                        | 结构化日志输出为 JSON                                                 |
+| `APP_ALLOWED_ORIGINS`             | `["*"]`                        | CORS 白名单，逗号分隔                                                 |
+
+
+完整列表见 `[app/core/config.py](./app/core/config.py)` 与 `[.env.example](./.env.example)`。
 
 ### 切换到 PostgreSQL
 
@@ -206,16 +208,20 @@ uv run alembic upgrade head
 
 ## API 示例
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| `GET` | `/api/v1/health/live` | 存活探针（K8s liveness） |
-| `GET` | `/api/v1/health/ready` | 就绪探针（校验数据库连接） |
-| `POST` | `/api/v1/users` | 注册用户 |
-| `GET` | `/api/v1/users` | 分页列出用户 |
-| `GET` | `/api/v1/users/{user_id}` | 获取用户 |
-| `POST` | `/api/v1/auth/token` | 登录，获取 access + refresh token |
-| `POST` | `/api/v1/auth/refresh` | 使用 refresh token 换新 access token |
-| `GET` | `/api/v1/auth/me` | 获取当前登录用户信息 |
+
+| 方法     | 路径                        | 说明                               |
+| ------ | ------------------------- | -------------------------------- |
+| `GET`  | `/api/v1/health/live`     | 存活探针（K8s liveness）               |
+| `GET`  | `/api/v1/health/ready`    | 就绪探针（校验数据库连接）                    |
+| `POST` | `/api/v1/users`           | 注册用户                             |
+| `GET`  | `/api/v1/users`           | 分页列出用户                           |
+| `GET`  | `/api/v1/users/{user_id}` | 获取用户                             |
+| `POST` | `/api/v1/auth/token`      | 登录，获取 access + refresh token     |
+| `POST` | `/api/v1/auth/refresh`    | 使用 refresh token 换新 access token |
+| `GET`  | `/api/v1/auth/me`         | 获取当前登录用户信息                       |
+
+
+`users` 列表/详情接口在模板中保持公开，便于快速演示。真实业务如果包含敏感用户数据，默认应改为 `CurrentUser` 保护，或增加“仅本人/管理员可见”的依赖。
 
 ## 测试
 
@@ -229,10 +235,12 @@ make test-down # 停止并清理
 
 测试容器通过 `docker-compose.test.yml` 与 dev 栈隔离：
 
-| 组件 | 端口 | 数据库 | 持久化 |
-|---|---|---|---|
+
+| 组件         | 端口               | 数据库        | 持久化         |
+| ---------- | ---------------- | ---------- | ----------- |
 | PostgreSQL | `localhost:5433` | `app_test` | tmpfs（即开即清） |
-| Redis | `localhost:6380` | DB 0 | 无 RDB / AOF |
+| Redis      | `localhost:6380` | DB 0       | 无 RDB / AOF |
+
 
 每个测试执行前，`conftest.py` 的 autouse fixture 自动：
 
@@ -293,34 +301,25 @@ docker run --rm -p 8000:8000 \
 - 内建 `HEALTHCHECK` 打到 `/api/v1/health/live`
 - 多架构（`linux/amd64` + `linux/arm64`）
 
-### GHCR 镜像
-
-CI 会自动发布到 GitHub Container Registry：
-
-```text
-ghcr.io/gggjjto/fastapi-template:latest
-ghcr.io/gggjjto/fastapi-template:<version>
-ghcr.io/gggjjto/fastapi-template:sha-<short>
-```
-
 ## CI/CD
 
-完整 GitHub Actions 工作流位于 [`.github/workflows/`](./.github/workflows)：
+完整 GitHub Actions 工作流位于 `[.github/workflows/](./.github/workflows)`：
 
-| 工作流 | 触发 | 作用 |
-|---|---|---|
-| [`ci.yml`](./.github/workflows/ci.yml) | push / PR → `main` | Ruff lint + format、mypy、pytest + 覆盖率（PG + Redis services）、Alembic 升/降级、Docker 构建验证 |
-| [`docker.yml`](./.github/workflows/docker.yml) | push → `main`、`v*.*.*` tag | 构建并发布多架构镜像到 GHCR，附带 SBOM 与构建 attestation |
-| [`release.yml`](./.github/workflows/release.yml) | `v*.*.*` tag 或手动 | 基于 commit 历史自动生成 Changelog 并创建 GitHub Release |
+
+| 工作流                                              | 触发                 | 作用                                                                                                   |
+| ------------------------------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `[ci.yml](./.github/workflows/ci.yml)`           | push / PR → `main` | Ruff lint + format、mypy、pytest + 覆盖率（PG + Redis services）、Alembic 升/降级、Docker 构建验证、安全扫描（依赖漏洞 + 静态检查） |
+| `[release.yml](./.github/workflows/release.yml)` | `v*.*.*` tag 或手动   | 基于 commit 历史自动生成 Changelog 并创建 GitHub Release                                                        |
+
 
 配套：
 
-- [`.github/dependabot.yml`](./.github/dependabot.yml) — 每周自动升级 uv / GitHub Actions / Dockerfile 依赖
-- [`.dockerignore`](./.dockerignore) — 最小化镜像构建上下文
+- `[.github/dependabot.yml](./.github/dependabot.yml)` — 每周自动升级 uv / GitHub Actions / Dockerfile 依赖
+- `[.dockerignore](./.dockerignore)` — 最小化镜像构建上下文
 
 ### 首次启用前的准备
 
-1. 仓库 **Settings → Actions → General → Workflow permissions** 勾选 **Read and write permissions**（GHCR 推送需要）。
+1. 仓库 **Settings → Actions → General → Workflow permissions** 保持默认即可（当前流程不涉及镜像推送）。
 2. （可选）在 **Settings → Secrets and variables → Actions** 添加 `CODECOV_TOKEN` 启用覆盖率上传。
 
 ### 本地复现 CI
@@ -332,18 +331,28 @@ docker build .    # 验证镜像构建
 
 ## 路线图
 
-- [ ] OAuth2 / OIDC 第三方登录示例
-- [ ] 细粒度权限（RBAC / Casbin）示例
-- [ ] OpenTelemetry 链路追踪
-- [ ] 多租户 / 多环境配置示例
-- [ ] WebSocket 示例
-- [ ] 事件驱动（domain events / outbox）示例
+- OAuth2 / OIDC 第三方登录示例
+- 细粒度权限（RBAC / Casbin）示例
+- OpenTelemetry 链路追踪
+- 多租户 / 多环境配置示例
+- WebSocket 示例
+- 事件驱动（domain events / outbox）示例
 
 欢迎通过 [Issues](https://github.com/gggjjto/fastapi-template/issues) 讨论新方向。
+
+## 进阶可选项
+
+以下能力默认不启用，保持模板轻量；当项目进入团队协作或生产化阶段再按需开启：
+
+- Docker 镜像自动发布（GHCR）
+- SBOM 与构建 attestation
+- 更重型安全扫描（CodeQL、Trivy）
 
 ## 贡献
 
 欢迎 Issue 与 Pull Request！
+
+贡献细则见 `[CONTRIBUTING.md](./CONTRIBUTING.md)`，安全问题提交流程见 `[SECURITY.md](./SECURITY.md)`。
 
 1. Fork 本仓库
 2. 创建特性分支：`git checkout -b feat/awesome`
@@ -353,10 +362,10 @@ docker build .    # 验证镜像构建
 
 提交前请确保：
 
-- [ ] `make lint` 通过
-- [ ] `make format` 已运行
-- [ ] `make test` 通过（需先 `make test-up`）
-- [ ] 新代码补充了对应测试
+- `make lint` 通过
+- `make format` 已运行
+- `make test` 通过（需先 `make test-up`）
+- 新代码补充了对应测试
 
 ## 许可证
 
@@ -371,8 +380,4 @@ docker build .    # 验证镜像构建
 
 ---
 
-<div align="center">
-
 如果这个模板对你有帮助，欢迎给一个 [Star](https://github.com/gggjjto/fastapi-template/stargazers)
-
-</div>

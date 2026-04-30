@@ -107,11 +107,13 @@ app/
 
 Both Redis and Sentry are opt-in via env vars. The app starts and runs normally without them.
 
-| Feature | Enable via | What it unlocks |
-|---|---|---|
-| Redis | `APP_REDIS_URL=redis://...` | `RedisClient`, `RedisCache`, `ArqPool` |
-| Task queue | `APP_REDIS_URL=redis://...` | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings` |
-| Sentry | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported |
+
+| Feature    | Enable via                   | What it unlocks                                                  |
+| ---------- | ---------------------------- | ---------------------------------------------------------------- |
+| Redis      | `APP_REDIS_URL=redis://...`  | `RedisClient`, `RedisCache`, `ArqPool`                           |
+| Task queue | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings` |
+| Sentry     | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported       |
+
 
 ### Testing
 
@@ -146,3 +148,25 @@ tests/
 A `/fastapi-best-practices` skill lives in `skills/fastapi-best-practices/SKILL.md` and `.claude/commands/fastapi-best-practices.md`. Use it when scaffolding new domains, reviewing architecture decisions, choosing between `async def` and `def`, designing dependencies, or adding new endpoints.
 
 A `/dev-workflow` skill lives in `skills/dev-workflow/SKILL.md` and `.claude/commands/dev-workflow.md`. Use it when finishing a set of changes and ready to commit and push — runs quality gates (ruff + mypy), fixes errors, writes conventional commits, and pushes.
+
+Additional development workflows live in `.claude/commands/`:
+
+- `/add-domain` — scaffold a new domain with router/service/repository/schema/model/test flow.
+- `/add-endpoint` — add or change an endpoint in an existing domain.
+- `/fix-bug` — reproduce, add a failing test when appropriate, fix, and verify.
+- `/db-change` — update ORM models, migrations, repository/service/tests, and docs.
+- `/security-review` — review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secrets, validation, and CI gates.
+- `/ship-change` — run documentation/security/test review and quality gates before handoff or commit.
+
+Documentation maintenance rules live in `.claude/rules/docs-maintenance.md`. Apply them before finishing any change that affects setup, APIs, configuration, tests, CI/CD, security posture, or AI workflow.
+
+## Subagents
+
+Project subagent definitions live in `.claude/agents/`:
+
+- `fastapi-architect` — plan or review domain design, API boundaries, dependencies, database models, migrations, and architecture tradeoffs.
+- `test-writer` — write or review integration tests for endpoints, auth behavior, validation errors, and database-backed flows.
+- `docs-maintainer` — check whether README, CLAUDE.md, `.claude/rules`, CONTRIBUTING, SECURITY, or PR templates need updates.
+- `security-reviewer` — review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secret handling, input validation, and CI security gates.
+
+For larger changes, run these roles in parallel where useful, then merge their findings into the main implementation plan.

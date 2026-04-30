@@ -7,9 +7,13 @@ globs: app/**/*.py, tests/**/*.py
 
 Each domain owns all its artefacts: `router.py`, `schemas.py`, `models.py`, `dependencies.py`, `service.py`, `repository.py`, `constants.py`, `exceptions.py`. Cross-domain imports must be explicit (`from app.auth import constants as auth_constants`).
 
+This project uses top-level `app/`; it is equivalent to the `src/` directory used in `zhanymkanov/fastapi-best-practices`.
+
 ## Response envelope
 
 All endpoints return `ApiResponse[T]`: `{"code": 200, "message": "success", "data": {...}}`. Use `ApiResponse.ok(data)` in routers. Errors: `{"code": 4xx, "message": "...", "data": null}`.
+
+This consistency is intentional even though FastAPI validates against `response_model` after the router builds the response object. For extremely hot endpoints, measure first before bypassing the envelope.
 
 ## Router handlers
 
@@ -28,6 +32,7 @@ All endpoints return `ApiResponse[T]`: `{"code": 200, "message": "success", "dat
 - Resource-loading deps raise `HTTPException` directly. Domain services raise `DomainError` subclasses.
 - Chain dependencies freely — FastAPI caches per-request, no overhead.
 - Auth guard: `CurrentUser = Annotated[User, Depends(get_current_active_user)]`.
+- Public endpoints must be intentional. Any endpoint that reads user, tenant, billing, or private domain data should default to `CurrentUser` or a narrower guard.
 
 ## Async / sync
 

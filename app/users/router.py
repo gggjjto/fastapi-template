@@ -25,6 +25,10 @@ router = APIRouter()
         "- 邮箱全局唯一，重复注册返回 409\n"
         "- 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆"
     ),
+    responses={
+        status.HTTP_409_CONFLICT: {"description": "邮箱已存在"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "请求参数校验失败"},
+    },
 )
 async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[UserRead]:
     try:
@@ -44,6 +48,9 @@ async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[Us
         "- `offset`：跳过条数，默认 0\n"
         "- 返回体包含 `total`（总数）、`items`（当页数据）、`limit`、`offset`"
     ),
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "分页参数校验失败"},
+    },
 )
 async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[Page[UserRead]]:
     users, total = await UserService(UserRepository(session)).list_users(
@@ -66,6 +73,10 @@ async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[
     description=(
         "根据 ID 查询单个用户。\n\n- `user_id` 必须是合法的 UUID 格式\n- 用户不存在时返回 404"
     ),
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "用户不存在"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "用户 ID 格式校验失败"},
+    },
 )
 async def get_user(user: User = Depends(valid_user_id)) -> ApiResponse[UserRead]:
     return ApiResponse.ok(UserRead.model_validate(user))

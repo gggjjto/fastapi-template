@@ -17,6 +17,10 @@ Auto-fix ruff errors first: `uv run ruff check --fix . && uv run ruff format .`
 
 Mypy errors must be fixed properly — not suppressed with `# type: ignore` unless the root cause is a known external library type mismatch. Always note why in the ignore comment.
 
+## Documentation check
+
+Before committing, check whether the change affects setup, APIs, configuration, tests, CI/CD, security posture, or AI workflow. If it does, update the smallest relevant document according to `.claude/rules/docs-maintenance.md`.
+
 ## Commit style
 
 Conventional commits. One logical change per commit. Subject under 72 characters.
