@@ -1,6 +1,6 @@
 ---
-description: AI fast-development workflow for this FastAPI template — applied globally
-globs: "**/*"
+description: AI fast-development workflow for this FastAPI template
+globs: "app/**,tests/**,alembic/**"
 ---
 
 ## AI fast-development loop

@@ -87,21 +87,13 @@ app/
 
 ### Key conventions
 
-- **Response envelope**: All endpoints return `ApiResponse[T]` — `{"code": 200, "message": "success", "data": {...}}`. Errors: `{"code": 4xx, "message": "...", "data": null}`. Use `ApiResponse.ok(data)` in routers.
-- **Domain imports**: When a domain needs another domain's code, import explicitly — `from app.auth import constants as auth_constants`.
-- **Settings**: All env vars use `APP_` prefix. Access via `get_settings()` (LRU-cached singleton).
+- **Python version**: Requires Python ≥3.12. The codebase uses PEP 695 generic class syntax (`class ApiResponse[T]`, `class Page[T]`).
+- **Future annotations**: Every module starts with `from __future__ import annotations` to defer annotation evaluation.
+- **Pagination**: List endpoints inject `Pagination` (a `PaginationParams` dependency alias from `app.core.pagination`) and return `Page[T]` as the `data` field. `Page` carries `items`, `total`, `limit`, and `offset`.
 - **DB session**: Use `DBSession` type alias from `app.db.session`. Injected per-request via `get_db_session()`.
 - **Redis client**: Use `RedisClient` type alias from `app.db.redis`. Only available when `APP_REDIS_URL` is set.
-- **Task queue**: Use `ArqPool` type alias from `app.core.arq` to enqueue jobs. Enqueue: `await queue.enqueue_job("task_name", arg)`.
-- **Rate limiting**: Apply `@limiter.limit("N/period")` from `app.core.limiter`. The endpoint must have `request: Request` as its first parameter.
-- **Auth guard**: Use `CurrentUser = Annotated[User, Depends(get_current_active_user)]` from `app.auth.dependencies`.
-- **Domain exceptions**: Services raise `DomainError` subclasses; dependencies raise `HTTPException` directly; routers catch domain exceptions and convert to HTTP responses.
-- **Models must be imported** before `Base.metadata` is used. Add new models in both `app/db/session.py` and `alembic/env.py`.
-- **Default DB**: SQLite (`sqlite+aiosqlite:///./app.db`) for local dev. Switch to PostgreSQL by changing `APP_DATABASE_URL` and setting `APP_DB_CREATE_TABLES_ON_STARTUP=false`, then use Alembic.
-- **Docs visibility**: OpenAPI is hidden (`openapi_url=None`) in any env other than `development` or `test`.
-- **CustomModel**: All Pydantic schemas inherit from `app.core.schemas.CustomModel` (`populate_by_name=True`, `from_attributes=True`).
-- **Schema fields**: Always annotate with `Field(description=..., examples=[...])`. Input schemas also add validation constraints (`min_length`, `max_length`, `ge`, `le`). Output schemas (e.g. `UserRead`, `TokenResponse`) skip constraints. Use `EmailStr` for email fields across all schemas.
-- **Router metadata**: Every route decorator must include `summary`, `description`, and `response_model`. Keep docstrings out of handler functions — put the text in the decorator instead.
+- **Task queue**: Use `ArqPool` type alias from `app.core.arq` to enqueue jobs. Enqueue: `await queue.enqueue_job("task_name", arg)`. New task functions must also be registered in `WorkerSettings.functions` in `app/worker.py`.
+- **Middleware order**: `add_middleware()` calls are LIFO — the last-added middleware wraps outermost (first to handle requests). Current order: GZip (outermost) → RequestID → CORS (innermost).
 
 ### Optional services
 
@@ -113,6 +105,8 @@ Both Redis and Sentry are opt-in via env vars. The app starts and runs normally 
 | Redis      | `APP_REDIS_URL=redis://...`  | `RedisClient`, `RedisCache`, `ArqPool`                           |
 | Task queue | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings` |
 | Sentry     | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported       |
+
+> **Note**: `redis` is pinned to `<6` because `arq <=0.28` does not support redis 6/7. Do not bump this until arq releases support.
 
 
 ### Testing
@@ -159,14 +153,3 @@ Additional development workflows live in `.claude/commands/`:
 - `/ship-change` — run documentation/security/test review and quality gates before handoff or commit.
 
 Documentation maintenance rules live in `.claude/rules/docs-maintenance.md`. Apply them before finishing any change that affects setup, APIs, configuration, tests, CI/CD, security posture, or AI workflow.
-
-## Subagents
-
-Project subagent definitions live in `.claude/agents/`:
-
-- `fastapi-architect` — plan or review domain design, API boundaries, dependencies, database models, migrations, and architecture tradeoffs.
-- `test-writer` — write or review integration tests for endpoints, auth behavior, validation errors, and database-backed flows.
-- `docs-maintainer` — check whether README, CLAUDE.md, `.claude/rules`, CONTRIBUTING, SECURITY, or PR templates need updates.
-- `security-reviewer` — review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secret handling, input validation, and CI security gates.
-
-For larger changes, run these roles in parallel where useful, then merge their findings into the main implementation plan.

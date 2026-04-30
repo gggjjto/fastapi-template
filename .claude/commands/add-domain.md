@@ -14,7 +14,7 @@ Ask for any missing critical details:
 
 ## Workflow
 
-1. Use `fastapi-architect` to map the smallest domain shape.
+1. If the design is unclear, use `fastapi-architect` to plan the domain shape first (read-only planning step — skip for straightforward domains).
 2. Follow `.claude/rules/fastapi-domain-scaffold.md`.
 3. Create domain files only as needed:
    - `constants.py`

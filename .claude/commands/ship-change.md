@@ -49,3 +49,5 @@ Return:
 2. Documentation/security/test review result.
 3. Quality gate results.
 4. Suggested commit message if useful.
+
+When all gates pass, run `/dev-workflow` to commit and push.
