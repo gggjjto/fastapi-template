@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     project_name: str = "FastAPI Template"
     env: Literal["development", "staging", "production", "test"] = "development"
     debug: bool = True
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104 — intentional for containerized deployment, override via APP_HOST
     port: int = 8000
     api_v1_prefix: str = "/api/v1"
     log_level: str = "INFO"
