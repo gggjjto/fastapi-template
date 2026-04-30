@@ -8,7 +8,7 @@ globs: "app/**,tests/**,alembic/**"
 Use this workflow for feature work:
 
 1. Locate the closest existing domain and mirror its patterns.
-2. Propose the smallest useful change before editing when requirements are unclear.
+2. **If requirements are unclear, ask targeted questions first — do not start writing code until the key decisions (fields, auth, error cases, migration) are resolved.**
 3. Change code in domain order: `schemas.py` → `models.py` → `repository.py` → `service.py` → `dependencies.py` → `router.py` → tests.
 4. Keep routers thin. Business decisions belong in services; database queries belong in repositories.
 5. Add or update tests for behavior changes. Prefer integration tests over mocks.
@@ -39,3 +39,4 @@ Follow CLAUDE.md and existing users/auth patterns.
 - Prefer existing local helpers over new dependencies.
 - Do not add infrastructure unless the feature needs it now.
 - Follow `.claude/rules/docs-maintenance.md` for documentation updates.
+- **When adding code to an existing file, clean up inconsistencies in the surrounding code rather than layering new code on top of messy existing code.**
