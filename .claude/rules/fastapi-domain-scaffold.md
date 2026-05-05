@@ -1,7 +1,8 @@
 ---
-description: Rules for scaffolding new FastAPI domains in this project
+
+## description: Rules for scaffolding new FastAPI domains in this project
+
 globs: app/**/*.py, tests/**/*.py
----
 
 ## New domain scaffold
 
@@ -32,7 +33,7 @@ Add `utils.py` only for pure, non-business helper functions that would otherwise
 - Include the router from `app/router.py`.
 - Import new ORM models in `app/db/session.py`.
 - Import new ORM models in `alembic/env.py`.
-- Add an Alembic migration when persistent schema changes.
+- Add an Alembic migration when persistent schema changes: use `**make revision m="describe change"**` (autogenerate). Do not add new revision files by hand; edit the generated file only for steps autogenerate cannot produce (data backfills, partial indexes, etc.).
 - Mirror route metadata style: `summary`, `description`, `response_model`.
 
 ## Layer responsibilities
@@ -43,3 +44,4 @@ Add `utils.py` only for pure, non-business helper functions that would otherwise
 - `schemas.py`: request/response DTOs using `CustomModel`.
 - `exceptions.py`: domain-specific `DomainError` subclasses.
 - `constants.py`: error codes and stable literals.
+

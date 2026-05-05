@@ -1,6 +1,15 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.8
+    rev: v0.15.12
     hooks:
       - id: ruff-check
       - id: ruff-format
+
+  # Whole-app check (matches CI typecheck job); keeps commits from landing obvious type errors.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (app)
+        entry: uv run mypy app
+        language: system
+        pass_filenames: false

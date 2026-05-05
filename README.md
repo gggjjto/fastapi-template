@@ -277,7 +277,7 @@ make docker-run   # 本地运行镜像
 uv run pre-commit install
 ```
 
-之后每次 `git commit` 都会自动运行 `ruff check` + `ruff format`。
+安装后，每次 `git commit` 会运行 **pre-commit** 中的检查（与 `.pre-commit-config.yaml` 一致：当前为 `ruff check`、`ruff format`、**mypy `app`**）。完整测试与 CI 一致请用 `make ci`（集成测试需先有 PostgreSQL + Redis，见上文「运行测试」）。
 
 ## Docker 部署
 

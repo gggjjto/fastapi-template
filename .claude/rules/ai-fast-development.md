@@ -40,3 +40,4 @@ Follow CLAUDE.md and existing users/auth patterns.
 - Do not add infrastructure unless the feature needs it now.
 - Follow `.claude/rules/docs-maintenance.md` for documentation updates.
 - **When adding code to an existing file, clean up inconsistencies in the surrounding code rather than layering new code on top of messy existing code.**
+
