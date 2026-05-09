@@ -106,8 +106,8 @@ Both Redis and Sentry are opt-in via env vars. The app starts and runs normally 
 | Task queue | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings` |
 | Sentry     | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported       |
 
-> **Note**: `redis` is pinned to `<6` because `arq <=0.28` does not support redis 6/7. Do not bump this until arq releases support.
 
+> **Note**: `redis` is pinned to `<6` because `arq <=0.28` does not support redis 6/7. Do not bump this until arq releases support.
 
 ### Testing
 
@@ -137,19 +137,26 @@ tests/
     └── test_users.py
 ```
 
-## Skills
+## Commands and Skills
 
-A `/fastapi-best-practices` skill lives in `skills/fastapi-best-practices/SKILL.md` and `.claude/commands/fastapi-best-practices.md`. Use it when scaffolding new domains, reviewing architecture decisions, choosing between `async def` and `def`, designing dependencies, or adding new endpoints.
+Development workflows are available as skills in `.claude/skills/`:
 
-A `/dev-workflow` skill lives in `skills/dev-workflow/SKILL.md` and `.claude/commands/dev-workflow.md`. Use it when finishing a set of changes and ready to commit and push — runs quality gates (ruff + mypy), fixes errors, writes conventional commits, and pushes.
-
-Additional development workflows live in `.claude/commands/`:
-
+- `/feature` — complete development workflow: confirm requirements → write code → write tests → quality gates → commit.
+- `/refactor` — safe refactoring: establish test baseline → make surgical changes → verify behavior unchanged → commit.
+- `/fastapi-best-practices` — apply conventions when scaffolding domains, reviewing architecture, or adding endpoints.
+- `/dev-workflow` — run quality gates (ruff + mypy), fix errors, write conventional commits, and push.
 - `/add-domain` — scaffold a new domain with router/service/repository/schema/model/test flow.
 - `/add-endpoint` — add or change an endpoint in an existing domain.
 - `/fix-bug` — reproduce, add a failing test when appropriate, fix, and verify.
 - `/db-change` — update ORM models, migrations, repository/service/tests, and docs.
 - `/security-review` — review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secrets, validation, and CI gates.
 - `/ship-change` — run documentation/security/test review and quality gates before handoff or commit.
+- `/karpathy-guidelines` — apply before writing new code: surface assumptions, keep changes surgical, avoid speculative features.
+- `/gather-reqs` — gather and record feature requirements before coding: structured questions → confirmed spec → saved to requirements log.
+- `/discuss-reqs` — collaborative requirements analysis: proactively surface blind spots, edge cases, and missing details through iterative discussion before coding.
+- `/breakdown` — decompose a large feature into ordered, reviewable PRs with explicit layer dependencies.
+- `/write-tests` — write or improve integration tests for existing code: gap analysis → tests → run.
+- `/write-pr` — generate a filled PR description from the current branch diff and commit history.
+- `/upgrade-deps` — safely upgrade a dependency: changelog analysis → version bump → test validation.
 
 Documentation maintenance rules live in `.claude/rules/docs-maintenance.md`. Apply them before finishing any change that affects setup, APIs, configuration, tests, CI/CD, security posture, or AI workflow.
