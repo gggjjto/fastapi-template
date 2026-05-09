@@ -1,3 +1,8 @@
+---
+description: Run the full development workflow: quality gates → fix → commit → push. Use when finishing a set of changes and ready to ship.
+disable-model-invocation: true
+---
+
 # Dev Workflow
 
 Run the full development workflow: quality gates → fix → commit → push. Follow this skill when the user asks to ship, review, check, or push code, or when finishing a set of changes.

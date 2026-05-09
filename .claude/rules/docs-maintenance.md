@@ -1,6 +1,5 @@
 ---
 description: Documentation maintenance rules for this FastAPI template
-globs: "**/*"
 ---
 
 ## Documentation step

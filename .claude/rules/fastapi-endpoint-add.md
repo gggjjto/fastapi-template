@@ -1,6 +1,7 @@
 ---
 description: Rules for adding or changing API endpoints in this FastAPI template
-globs: app/**/*.py
+paths:
+  - "app/**/*.py"
 ---
 
 ## Endpoint implementation checklist

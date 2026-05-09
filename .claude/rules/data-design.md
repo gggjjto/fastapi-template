@@ -1,6 +1,9 @@
 ---
 description: Persistence and data-model design rules (soft delete first)
-globs: app/**/*.py, alembic/**/*.py, tests/**/*.py
+paths:
+  - "app/**/*.py"
+  - "alembic/**/*.py"
+  - "tests/**/*.py"
 ---
 
 ## Deletion strategy

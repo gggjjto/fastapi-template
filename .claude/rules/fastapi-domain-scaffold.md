@@ -1,8 +1,9 @@
 ---
-
-## description: Rules for scaffolding new FastAPI domains in this project
-
-globs: app/**/*.py, tests/**/*.py
+description: Rules for scaffolding new FastAPI domains in this project
+paths:
+  - "app/**/*.py"
+  - "tests/**/*.py"
+---
 
 ## New domain scaffold
 

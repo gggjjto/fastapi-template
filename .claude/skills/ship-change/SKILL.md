@@ -1,3 +1,8 @@
+---
+description: Finish a set of changes before commit, PR, or handoff. Runs docs review, security review, test review, and quality gates.
+disable-model-invocation: true
+---
+
 # Ship Change
 
 Use this workflow to finish a set of changes before commit, PR, or handoff.
@@ -5,11 +10,12 @@ Use this workflow to finish a set of changes before commit, PR, or handoff.
 ## Workflow
 
 1. Review the diff and group changes by intent.
-2. Run `docs-maintainer` for documentation impact.
-3. Run `security-reviewer` when the change touches auth, user data, config, CI, or public API behavior.
-4. Run or request `test-writer` review when behavior changed.
-5. Run quality gates.
-6. Summarize what changed, what was verified, and any remaining risk.
+2. Run `code-reviewer` for code quality, naming, layer boundaries, and type hints.
+3. Run `docs-maintainer` for documentation impact.
+4. Run `security-reviewer` when the change touches auth, user data, config, CI, or public API behavior.
+5. Run or request `test-writer` review when behavior changed.
+6. Run quality gates.
+7. Summarize what changed, what was verified, and any remaining risk.
 
 ## Quality gates
 

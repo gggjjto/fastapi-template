@@ -1,3 +1,8 @@
+---
+description: Add or change an API endpoint in an existing domain. Use when a new route or modification to an existing route is needed.
+disable-model-invocation: true
+---
+
 # Add Endpoint
 
 Use this workflow to add or change an API endpoint in an existing domain.

@@ -1,3 +1,8 @@
+---
+description: Fix a bug or regression. Use when reproducing a failure, adding a failing test, and fixing the root cause with the smallest code change.
+disable-model-invocation: true
+---
+
 # Fix Bug
 
 Use this workflow for bug fixes and regressions.

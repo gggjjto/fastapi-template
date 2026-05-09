@@ -1,3 +1,8 @@
+---
+description: Scaffold a new FastAPI business domain. Use when adding a new feature domain with router, service, repository, schemas, model, and tests.
+disable-model-invocation: true
+---
+
 # Add Domain
 
 Use this workflow to add a new FastAPI business domain.

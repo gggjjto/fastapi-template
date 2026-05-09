@@ -1,8 +1,6 @@
 ---
-
-## description: Commit and quality gate conventions for this project — applied globally
-
-globs: "**/*"
+description: Commit and quality gate conventions for this project — applied globally
+---
 
 ## How checks are enforced (best-effort vs hard guarantees)
 

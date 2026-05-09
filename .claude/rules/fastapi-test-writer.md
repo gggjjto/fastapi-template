@@ -1,6 +1,8 @@
 ---
 description: Rules for writing tests in this FastAPI template
-globs: tests/**/*.py, app/**/*.py
+paths:
+  - "tests/**/*.py"
+  - "app/**/*.py"
 ---
 
 ## Test style

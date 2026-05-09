@@ -1,3 +1,8 @@
+---
+description: Review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secrets, validation, and CI gates. Use before shipping auth or API changes.
+disable-model-invocation: true
+---
+
 # Security Review
 
 Use this workflow before shipping auth, user data, config, CI, or externally visible API changes.

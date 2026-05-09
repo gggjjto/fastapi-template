@@ -1,3 +1,8 @@
+---
+description: Apply database model, schema, and migration changes. Use when ORM models change, new tables are added, or columns are modified.
+disable-model-invocation: true
+---
+
 # Database Change
 
 Use this workflow for database model, schema, and migration changes.

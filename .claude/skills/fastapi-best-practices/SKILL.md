@@ -1,3 +1,8 @@
+---
+description: Review or apply production-grade FastAPI conventions. Use when scaffolding domains, reviewing architecture, choosing async vs sync, or checking endpoint patterns.
+disable-model-invocation: true
+---
+
 # FastAPI Best Practices
 
 Review or apply production-grade FastAPI conventions to the current task.

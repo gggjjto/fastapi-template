@@ -1,6 +1,8 @@
 ---
 description: FastAPI coding conventions for this project — applied automatically when editing Python source files
-globs: app/**/*.py, tests/**/*.py
+paths:
+  - "app/**/*.py"
+  - "tests/**/*.py"
 ---
 
 ## Domain structure
