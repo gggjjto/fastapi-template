@@ -37,6 +37,7 @@ os.environ.setdefault(
 )
 
 from app.core.config import get_settings
+from app.core.limiter import limiter
 from app.db.session import reset_db
 from app.main import app
 
@@ -52,6 +53,7 @@ async def _reset_state() -> AsyncGenerator[None, None]:
 
     不依赖 app lifespan，可单独运行。
     """
+    limiter._storage.reset()
     await reset_db()
 
     if _settings.redis_url:

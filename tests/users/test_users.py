@@ -62,3 +62,44 @@ async def test_validation_error_format(client: AsyncClient) -> None:
     assert data["code"] == 422
     assert isinstance(data["data"], list)
     assert len(data["data"]) > 0
+
+
+async def test_list_users_pagination_slicing(client: AsyncClient) -> None:
+    for i in range(3):
+        await client.post(
+            "/api/v1/users",
+            json={
+                "email": f"user{i}@example.com",
+                "full_name": f"User {i}",
+                "password": "Password123!",
+            },
+        )
+
+    resp = await client.get("/api/v1/users", params={"limit": 2, "offset": 1})
+
+    assert resp.status_code == 200
+    page = resp.json()["data"]
+    assert page["total"] == 3
+    assert len(page["items"]) == 2
+    assert page["limit"] == 2
+    assert page["offset"] == 1
+
+
+async def test_list_users_empty_page(client: AsyncClient) -> None:
+    await client.post(
+        "/api/v1/users",
+        json={"email": "one@example.com", "full_name": "One", "password": "Password123!"},
+    )
+
+    resp = await client.get("/api/v1/users", params={"offset": 10})
+
+    assert resp.status_code == 200
+    page = resp.json()["data"]
+    assert page["total"] == 1
+    assert page["items"] == []
+
+
+async def test_list_invalid_pagination_params(client: AsyncClient) -> None:
+    for params in [{"limit": 0}, {"limit": 101}, {"offset": -1}]:
+        resp = await client.get("/api/v1/users", params=params)
+        assert resp.status_code == 422, f"expected 422 for params={params}"
