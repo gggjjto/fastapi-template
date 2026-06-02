@@ -73,7 +73,9 @@ app/
 │   ├── error_codes.py   # CommonErrorCode — cross-domain stable string error codes
 │   ├── pagination.py    # PaginationParams dependency + Page[T] generic model
 │   ├── exceptions.py    # DomainError hierarchy (carries code/status_code/message_key) + BadRequest/Unauthorized/Forbidden/NotFound/Conflict/ValidationDomain
-│   ├── error_handlers.py# Global handlers: DomainError, HTTPException, validation, unhandled Exception fallback
+│   ├── error_handlers.py# Global handlers: DomainError (+ i18n message), HTTPException, validation, unhandled Exception fallback
+│   ├── i18n.py          # locale negotiation + message catalog lookup (locales/*.json)
+│   ├── openapi.py       # ErrorResponse model + error_responses() reusable OpenAPI helper
 │   ├── middleware.py    # RequestIDMiddleware (X-Request-ID header + structlog bind)
 │   ├── limiter.py       # slowapi Limiter instance + 429 handler
 │   ├── sentry.py        # init_sentry() — no-op when APP_SENTRY_DSN is empty

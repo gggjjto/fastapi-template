@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 
 from app.auth.dependencies import RequirePermission
+from app.core.openapi import error_responses
 from app.core.pagination import Page, Pagination
 from app.core.response import ApiResponse
 from app.db.session import DBSession
@@ -25,10 +26,7 @@ router = APIRouter()
         "- 邮箱全局唯一，重复注册返回 409\n"
         "- 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆"
     ),
-    responses={
-        status.HTTP_409_CONFLICT: {"description": "邮箱已存在"},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "请求参数校验失败"},
-    },
+    responses=error_responses(status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_ENTITY),
 )
 async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[UserRead]:
     user = await UserService(session).create_user(payload)
@@ -47,11 +45,11 @@ async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[Us
         "- 返回体包含 `total`（总数）、`items`（当页数据）、`limit`、`offset`\n"
         "- 未认证返回 401，已认证但无权限返回 403"
     ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"description": "未认证"},
-        status.HTTP_403_FORBIDDEN: {"description": "无 users:read 权限"},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "分页参数校验失败"},
-    },
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+    ),
 )
 async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[Page[UserRead]]:
     users, total = await UserService(session).list_users(
@@ -77,12 +75,12 @@ async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[
         "- `user_id` 必须是合法的 UUID 格式\n"
         "- 未认证返回 401，已认证但无权限返回 403，用户不存在返回 404"
     ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"description": "未认证"},
-        status.HTTP_403_FORBIDDEN: {"description": "无 users:read 权限"},
-        status.HTTP_404_NOT_FOUND: {"description": "用户不存在"},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "用户 ID 格式校验失败"},
-    },
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+    ),
 )
 async def get_user(user: User = Depends(valid_user_id)) -> ApiResponse[UserRead]:
     return ApiResponse.ok(UserRead.model_validate(user))

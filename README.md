@@ -188,6 +188,7 @@ app/
 | `APP_SENTRY_DSN`                  | *(空)*                          | 留空则关闭 Sentry                                                  |
 | `APP_LOG_JSON`                    | `false`                        | 结构化日志输出为 JSON                                                 |
 | `APP_ALLOWED_ORIGINS`             | `["*"]`                        | CORS 白名单，逗号分隔                                                 |
+| `APP_DEFAULT_LOCALE`              | `en-US`                        | 错误消息默认语言（`en-US` / `zh-CN`）                                  |
 
 
 完整列表见 `[app/core/config.py](./app/core/config.py)` 与 `[.env.example](./.env.example)`。
@@ -243,6 +244,22 @@ make revision m="describe change"    # 模型变更后自动生成新迁移
 - 路由用 `Depends(RequirePermission("users:read"))` 声明所需权限：未认证 401，已认证但无权限 403（`AUTH_PERMISSION_DENIED`）。
 - 启动时**幂等播种**权限目录与 `admin`（全权限）/`user`（暂无权限）两个角色（`app/auth/seed.py`），生产经迁移建表后启动即填充。
 - **引导**：第一个注册的用户自动成为 `admin`，之后的用户默认 `user`。需要更多角色/分配时，扩展 `RbacRepository` 或后续加管理接口。
+
+### 错误消息本地化（i18n）
+
+- 错误**码**（如 `USER_NOT_FOUND`）是稳定契约，**永不翻译**；可本地化的只有 `message`。
+- 领域异常携带 `message_key`，全局处理器按 `Accept-Language` 协商语言（用户偏好 → `Accept-Language` → `APP_DEFAULT_LOCALE`）后翻译消息。
+- 目录在 `locales/{en-US,zh-CN}.json`；缺失翻译回退默认语言，再缺失用异常自带英文消息。
+
+```bash
+curl -H "Accept-Language: zh-CN" -X POST .../api/v1/auth/token -d '{"email":"x@e.com","password":"wrongpass"}'
+# {"code":"AUTH_INVALID_CREDENTIALS","message":"邮箱或密码错误","data":null,"request_id":"..."}
+```
+
+### OpenAPI 文档标准
+
+- 每个路由都声明 `summary` / `description` / `response_model` / `tags`，并用 `app/core/openapi.py` 的 `error_responses(...)` 复用统一的 `ErrorResponse` 错误信封。
+- 受保护接口在 OpenAPI 中携带 Bearer 认证元数据；非 `development` / `test` 环境默认隐藏文档。
 
 ### 认证与会话
 

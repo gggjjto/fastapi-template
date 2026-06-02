@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"  # nosec B104 — intentional for containerized deployment, override via APP_HOST
     port: int = 8000
     api_v1_prefix: str = "/api/v1"
+    default_locale: Literal["en-US", "zh-CN"] = "en-US"
     log_level: str = "INFO"
     log_json: bool = False
     allowed_origins: list[str] = Field(default_factory=lambda: ["*"])

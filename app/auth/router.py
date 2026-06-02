@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, status
 
 from app.auth.dependencies import CurrentUser
 from app.auth.schemas import LoginRequest, MessageResponse, RefreshRequest, TokenResponse
 from app.auth.service import AuthService
 from app.core.limiter import limiter
+from app.core.openapi import error_responses
 from app.core.response import ApiResponse
 from app.db.session import DBSession
 from app.users.schemas import UserRead
@@ -22,6 +23,11 @@ router = APIRouter()
         "- access_token 有效期较短（默认 30 分钟），用于访问受保护接口\n"
         "- refresh_token 有效期较长（默认 30 天），用于刷新 access_token\n"
         "- 同一 IP 每分钟最多请求 10 次，超出返回 429"
+    ),
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_429_TOO_MANY_REQUESTS,
     ),
 )
 @limiter.limit("10/minute")  # 登录接口限流，防止暴力破解
@@ -48,6 +54,11 @@ async def login(
         "- refresh_token 只能用于此接口，不能用于访问其他受保护接口\n"
         "- token 无效或已过期时返回 401"
     ),
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_429_TOO_MANY_REQUESTS,
+    ),
 )
 @limiter.limit("20/minute")  # 刷新接口限流
 async def refresh(
@@ -68,6 +79,7 @@ async def refresh(
         "- 撤销后该 refresh_token 无法再刷新（已签发的 access_token 在到期前仍有效）\n"
         "- 即使会话不存在或已撤销也返回成功，避免信息泄露"
     ),
+    responses=error_responses(status.HTTP_422_UNPROCESSABLE_ENTITY),
 )
 async def logout(payload: RefreshRequest, session: DBSession) -> ApiResponse[MessageResponse]:
     await AuthService(session).logout(payload.refresh_token)
@@ -83,6 +95,7 @@ async def logout(payload: RefreshRequest, session: DBSession) -> ApiResponse[Mes
         "- 请求头需携带 `Authorization: Bearer <access_token>`\n"
         "- 撤销后所有 refresh_token 均失效，常用于密码泄露后强制下线"
     ),
+    responses=error_responses(status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
 )
 async def logout_all(current_user: CurrentUser, session: DBSession) -> ApiResponse[MessageResponse]:
     await AuthService(session).logout_all(current_user.id)
@@ -98,6 +111,7 @@ async def logout_all(current_user: CurrentUser, session: DBSession) -> ApiRespon
         "- 请求头需携带 `Authorization: Bearer <access_token>`\n"
         "- token 无效或过期返回 401，账号被禁用返回 403"
     ),
+    responses=error_responses(status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
 )
 async def get_me(current_user: CurrentUser) -> ApiResponse[UserRead]:
     return ApiResponse.ok(UserRead.model_validate(current_user))

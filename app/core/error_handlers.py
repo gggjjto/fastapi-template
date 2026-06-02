@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.error_codes import CommonErrorCode
 from app.core.exceptions import DomainError
+from app.core.i18n import negotiate_locale, translate
 
 logger = structlog.get_logger(__name__)
 
@@ -46,9 +47,16 @@ def register_error_handlers(app: FastAPI) -> None:
             path=request.url.path,
             method=request.method,
         )
+        # 按 Accept-Language 本地化消息；错误码始终保持稳定、不翻译
+        message = exc.message
+        if exc.message_key:
+            locale = negotiate_locale(request.headers.get("accept-language"))
+            translated = translate(exc.message_key, locale, exc.params)
+            if translated is not None:
+                message = translated
         return JSONResponse(
             status_code=exc.status_code,
-            content=_envelope(exc.code, exc.message),
+            content=_envelope(exc.code, message),
         )
 
     @app.exception_handler(HTTPException)

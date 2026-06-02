@@ -37,6 +37,7 @@ Track **active** requirements only. Git history is the archive — do not keep s
 - Phase 2 — config + migration: production `Settings` fail-fast validation; initial Alembic migration (`users`).
 - Phase 3 — JWT sessions: `auth_sessions` table + migration, refresh rotation, reuse detection, logout / logout-all.
 - Phase 4 — RBAC: roles/permissions tables + migration, startup seeding, first-user-admin, `RequirePermission`, protected user list/detail.
+- Phase 5 — i18n + OpenAPI: `app/core/i18n.py` + `locales/{en-US,zh-CN}.json`, domain-error messages localized via `Accept-Language` (default `APP_DEFAULT_LOCALE=en-US`); `app/core/openapi.py` `error_responses()` + `ErrorResponse` applied across routers.
 
-**Remaining:** Phase 5 (i18n + OpenAPI), Phase 6 (logging hardening).
+**Remaining:** Phase 6 (logging hardening: access-log fields, sensitive-data redaction, OpenTelemetry prep).
 
