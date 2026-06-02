@@ -12,7 +12,7 @@ async def test_create_and_list_users(client: AsyncClient) -> None:
     list_response = await client.get("/api/v1/users")
 
     assert create_response.status_code == 201
-    assert create_response.json()["code"] == 200
+    assert create_response.json()["code"] == "OK"
     user_data = create_response.json()["data"]
     assert user_data["email"] == "demo@example.com"
     assert "hashed_password" not in user_data
@@ -31,7 +31,7 @@ async def test_duplicate_email_returns_409(client: AsyncClient) -> None:
     )
 
     assert duplicate_response.status_code == 409
-    assert duplicate_response.json()["code"] == 409
+    assert duplicate_response.json()["code"] == "USER_EMAIL_CONFLICT"
 
 
 async def test_get_user_by_id(client: AsyncClient) -> None:
@@ -48,7 +48,7 @@ async def test_get_nonexistent_user_returns_404(client: AsyncClient) -> None:
     response = await client.get(f"/api/v1/users/{uuid.uuid4()}")
 
     assert response.status_code == 404
-    assert response.json()["code"] == 404
+    assert response.json()["code"] == "USER_NOT_FOUND"
 
 
 async def test_validation_error_format(client: AsyncClient) -> None:
@@ -59,7 +59,7 @@ async def test_validation_error_format(client: AsyncClient) -> None:
 
     assert response.status_code == 422
     data = response.json()
-    assert data["code"] == 422
+    assert data["code"] == "VALIDATION_ERROR"
     assert isinstance(data["data"], list)
     assert len(data["data"]) > 0
 

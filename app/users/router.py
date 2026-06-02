@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.pagination import Page, Pagination
 from app.core.response import ApiResponse
 from app.db.session import DBSession
 from app.users.dependencies import valid_user_id
-from app.users.exceptions import UserEmailConflict
 from app.users.models import User
 from app.users.repository import UserRepository
 from app.users.schemas import UserCreate, UserRead
@@ -31,10 +30,7 @@ router = APIRouter()
     },
 )
 async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[UserRead]:
-    try:
-        user = await UserService(UserRepository(session)).create_user(payload)
-    except UserEmailConflict as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    user = await UserService(UserRepository(session)).create_user(payload)
     return ApiResponse.ok(UserRead.model_validate(user))
 
 

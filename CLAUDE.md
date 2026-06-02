@@ -66,10 +66,11 @@ app/
 ├── core/
 │   ├── config.py        # pydantic-settings; all env vars prefixed APP_
 │   ├── schemas.py       # CustomModel base (populate_by_name, from_attributes)
-│   ├── response.py      # ApiResponse[T] — unified {code, message, data} envelope
+│   ├── response.py      # ApiResponse[T] — unified {code, message, data, request_id} envelope (code is a string business code)
+│   ├── error_codes.py   # CommonErrorCode — cross-domain stable string error codes
 │   ├── pagination.py    # PaginationParams dependency + Page[T] generic model
-│   ├── exceptions.py    # Base exceptions (DomainError, ConflictError)
-│   ├── error_handlers.py# Global HTTP + validation error handlers
+│   ├── exceptions.py    # DomainError hierarchy (carries code/status_code/message_key) + BadRequest/Unauthorized/Forbidden/NotFound/Conflict/ValidationDomain
+│   ├── error_handlers.py# Global handlers: DomainError, HTTPException, validation, unhandled Exception fallback
 │   ├── middleware.py    # RequestIDMiddleware (X-Request-ID header + structlog bind)
 │   ├── limiter.py       # slowapi Limiter instance + 429 handler
 │   ├── sentry.py        # init_sentry() — no-op when APP_SENTRY_DSN is empty

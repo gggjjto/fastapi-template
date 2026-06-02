@@ -19,7 +19,7 @@ async def test_login_rate_limit(client: AsyncClient) -> None:
 
     resp = await client.post("/api/v1/auth/token", json=_LOGIN_PAYLOAD)
     assert resp.status_code == 429
-    assert resp.json()["code"] == 429
+    assert resp.json()["code"] == "RATE_LIMITED"
 
 
 async def test_refresh_rate_limit(client: AsyncClient) -> None:
@@ -33,4 +33,4 @@ async def test_refresh_rate_limit(client: AsyncClient) -> None:
 
     resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert resp.status_code == 429
-    assert resp.json()["code"] == 429
+    assert resp.json()["code"] == "RATE_LIMITED"

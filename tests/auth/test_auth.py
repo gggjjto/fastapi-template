@@ -45,7 +45,7 @@ async def test_login_wrong_password(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 401
-    assert resp.json()["code"] == 401
+    assert resp.json()["code"] == "AUTH_INVALID_CREDENTIALS"
 
 
 async def test_login_unknown_email(client: AsyncClient) -> None:
@@ -65,7 +65,7 @@ async def test_get_me(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 200
-    assert resp.json()["code"] == 200
+    assert resp.json()["code"] == "OK"
     user = resp.json()["data"]
     assert user["email"] == _EMAIL
     assert "hashed_password" not in user
@@ -171,4 +171,4 @@ async def test_get_me_inactive_user(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 403
-    assert resp.json()["code"] == 403
+    assert resp.json()["code"] == "FORBIDDEN"

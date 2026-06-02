@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Request
 
 from app.auth.dependencies import CurrentUser
-from app.auth.exceptions import InvalidCredentials, InvalidToken
 from app.auth.schemas import LoginRequest, RefreshRequest, TokenResponse
 from app.auth.service import AuthService
 from app.core.limiter import limiter
@@ -32,10 +31,7 @@ async def login(
     payload: LoginRequest,
     session: DBSession,
 ) -> ApiResponse[TokenResponse]:
-    try:
-        tokens = await AuthService(UserRepository(session)).login(payload.email, payload.password)
-    except InvalidCredentials as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    tokens = await AuthService(UserRepository(session)).login(payload.email, payload.password)
     return ApiResponse.ok(tokens)
 
 
@@ -55,10 +51,7 @@ async def refresh(
     payload: RefreshRequest,
     session: DBSession,
 ) -> ApiResponse[TokenResponse]:
-    try:
-        tokens = await AuthService(UserRepository(session)).refresh(payload.refresh_token)
-    except InvalidToken as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    tokens = await AuthService(UserRepository(session)).refresh(payload.refresh_token)
     return ApiResponse.ok(tokens)
 
 

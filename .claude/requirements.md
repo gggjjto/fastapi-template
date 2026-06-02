@@ -26,4 +26,8 @@ Track **active** requirements only. Git history is the archive — do not keep s
 **Requirement:** Build a production-ready engineering foundation covering unified responses, business error codes, global exception handling, structured logging, environment-safe configuration, Alembic migration baseline, JWT session hardening, RBAC, i18n, and OpenAPI documentation standards.
 **Change from:** New active requirement.
 **Reason:** The project is evolving from a FastAPI starter template into a maintainable SaaS/backend foundation that future AI agents can implement phase by phase using `docs/engineering-foundation-requirements.md` and `docs/engineering-foundation-design.md`.
+**Decisions:**
+- Response envelope adopts **Option A**: `ApiResponse.code` is a stable **string** business code (`"OK"` / `"USER_NOT_FOUND"` …) plus a new `request_id` field — not the transitional int+`error_code` shape. Chosen because the template has no external API consumers yet.
+- Implementation proceeds **phase by phase**; Phase 1 (error contract + global exception handling) is delivered first, the rest only after sign-off.
+**Phase 1 status (done in code, pending integration-test run):** string error codes, enhanced `DomainError` hierarchy, global `DomainError`/unhandled-`Exception` handlers, `request_id` in envelopes, routers no longer hand-translate domain exceptions, `valid_user_id` raises domain `UserNotFound`.
 
