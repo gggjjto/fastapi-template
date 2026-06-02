@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import AuthSession
+from app.auth.models import AuthSession, Permission, Role, RolePermission, UserRole
 
 
 class AuthSessionRepository:
@@ -57,3 +57,32 @@ class AuthSessionRepository:
             .values(revoked_at=datetime.now(UTC))
         )
         await self.session.flush()
+
+
+class RbacRepository:
+    """角色 / 权限相关的所有数据库读写。不在此层提交事务。"""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_user_permissions(self, user_id: uuid.UUID) -> set[str]:
+        stmt = (
+            select(Permission.code)
+            .join(RolePermission, RolePermission.permission_id == Permission.id)
+            .join(UserRole, UserRole.role_id == RolePermission.role_id)
+            .where(UserRole.user_id == user_id)
+        )
+        return set((await self.session.scalars(stmt)).all())
+
+    async def get_role_by_name(self, name: str) -> Role | None:
+        return (await self.session.scalars(select(Role).where(Role.name == name))).first()
+
+    async def assign_role_to_user(self, user_id: uuid.UUID, role_id: uuid.UUID) -> None:
+        existing = (
+            await self.session.scalars(
+                select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
+            )
+        ).first()
+        if existing is None:
+            self.session.add(UserRole(user_id=user_id, role_id=role_id))
+            await self.session.flush()

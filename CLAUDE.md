@@ -47,12 +47,13 @@ app/
 ├── auth/                # JWT auth domain
 │   ├── router.py        # POST /auth/token, /auth/refresh, /auth/logout, /auth/logout-all, GET /auth/me
 │   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse, MessageResponse
-│   ├── models.py        # AuthSession ORM model (auth_sessions)
+│   ├── models.py        # AuthSession + RBAC models (Role, Permission, UserRole, RolePermission)
 │   ├── security.py      # hash_password, verify_password, create/decode tokens, hash_refresh_token
-│   ├── repository.py    # AuthSessionRepository (create/rotate/revoke sessions)
+│   ├── repository.py    # AuthSessionRepository + RbacRepository (permission resolution, role assignment)
+│   ├── seed.py          # ensure_default_rbac() — idempotent permission/role seeding at startup
 │   ├── service.py       # AuthService (login, refresh+rotation, logout, logout_all)
-│   ├── dependencies.py  # get_current_user, get_current_active_user, CurrentUser
-│   ├── constants.py     # ErrorCode
+│   ├── dependencies.py  # get_current_user, get_current_active_user, CurrentUser, RequirePermission
+│   ├── constants.py     # ErrorCode, Permission (roles:*), RoleName
 │   └── exceptions.py    # InvalidCredentials, InvalidToken
 ├── users/               # One directory per domain
 │   ├── router.py        # HTTP handlers only — no business logic

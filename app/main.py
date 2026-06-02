@@ -31,6 +31,13 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     if settings.db_create_tables_on_startup:
         await init_db()
 
+    # 幂等播种 RBAC 权限目录与默认角色（生产经迁移建表后，启动时填充参考数据）
+    from app.auth.seed import ensure_default_rbac
+    from app.db.session import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db_session:
+        await ensure_default_rbac(db_session)
+
     if settings.redis_url:
         from app.core.arq import init_arq
         from app.db.redis import init_redis

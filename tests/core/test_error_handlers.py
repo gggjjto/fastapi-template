@@ -14,8 +14,20 @@ async def _boom() -> None:
     raise RuntimeError("boom should not leak to the client")
 
 
+async def _admin_headers(client: AsyncClient) -> dict[str, str]:
+    """注册首个用户（自动成为 admin，拥有 users:read）并返回鉴权头。"""
+    payload = {"email": "eh-admin@example.com", "full_name": "EH Admin", "password": "Password123!"}
+    await client.post("/api/v1/users", json=payload)
+    resp = await client.post(
+        "/api/v1/auth/token", json={"email": payload["email"], "password": payload["password"]}
+    )
+    token = resp.json()["data"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 async def test_domain_error_envelope(client: AsyncClient) -> None:
-    resp = await client.get(f"/api/v1/users/{uuid.uuid4()}")
+    headers = await _admin_headers(client)
+    resp = await client.get(f"/api/v1/users/{uuid.uuid4()}", headers=headers)
 
     assert resp.status_code == 404
     body = resp.json()
@@ -55,8 +67,11 @@ async def test_unhandled_exception_returns_generic_500() -> None:
 
 
 async def test_request_id_is_propagated(client: AsyncClient) -> None:
+    headers = await _admin_headers(client)
     provided = "req-test-123"
-    resp = await client.get(f"/api/v1/users/{uuid.uuid4()}", headers={"X-Request-ID": provided})
+    resp = await client.get(
+        f"/api/v1/users/{uuid.uuid4()}", headers={**headers, "X-Request-ID": provided}
+    )
 
     assert resp.status_code == 404
     assert resp.headers["x-request-id"] == provided

@@ -235,7 +235,14 @@ make revision m="describe change"    # 模型变更后自动生成新迁移
 | `GET`  | `/api/v1/auth/me`         | 获取当前登录用户信息                       |
 
 
-`users` 列表/详情接口在模板中保持公开，便于快速演示。真实业务如果包含敏感用户数据，默认应改为 `CurrentUser` 保护，或增加“仅本人/管理员可见”的依赖。
+`users` 列表/详情接口需要 `users:read` 权限（见下文 RBAC）；注册（`POST /users`）保持公开以支持自助注册与引导。
+
+### 权限（RBAC）
+
+- 模型：`roles` / `permissions` / `user_roles` / `role_permissions`，权限码格式 `resource:action`（如 `users:read`）。
+- 路由用 `Depends(RequirePermission("users:read"))` 声明所需权限：未认证 401，已认证但无权限 403（`AUTH_PERMISSION_DENIED`）。
+- 启动时**幂等播种**权限目录与 `admin`（全权限）/`user`（暂无权限）两个角色（`app/auth/seed.py`），生产经迁移建表后启动即填充。
+- **引导**：第一个注册的用户自动成为 `admin`，之后的用户默认 `user`。需要更多角色/分配时，扩展 `RbacRepository` 或后续加管理接口。
 
 ### 认证与会话
 
