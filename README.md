@@ -192,6 +192,18 @@ app/
 
 完整列表见 `[app/core/config.py](./app/core/config.py)` 与 `[.env.example](./.env.example)`。
 
+### 生产环境安全校验
+
+当 `APP_ENV=production` 时，应用在**启动阶段 fail-fast**，下列任一不安全配置都会直接拒绝启动（见 `Settings._validate_production_safety`）：
+
+- `APP_JWT_SECRET` 不能为默认值，必须是高强度随机密钥。
+- `APP_ALLOWED_ORIGINS` 不能为通配符 `["*"]`，必须显式列出受信任来源。
+- `APP_DB_CREATE_TABLES_ON_STARTUP` 必须为 `false`，生产通过 Alembic 迁移建表。
+- `APP_DATABASE_URL` 必须使用 PostgreSQL。
+- `APP_LOG_JSON` 必须为 `true`，输出 JSON 结构化日志。
+
+开发 / 测试环境不触发该校验，保持开箱即用。OpenAPI 文档在非 `development` / `test` 环境默认隐藏。
+
 ### 切换到 PostgreSQL
 
 ```env
@@ -199,11 +211,11 @@ APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/app
 APP_DB_CREATE_TABLES_ON_STARTUP=false
 ```
 
-然后使用 Alembic：
+仓库已包含初始迁移（`alembic/versions/`），直接升级即可建表；后续模型变更用 `make revision` 自动生成新迁移：
 
 ```bash
-uv run alembic revision --autogenerate -m "init"
-uv run alembic upgrade head
+uv run alembic upgrade head          # 应用迁移（首次即建表）
+make revision m="describe change"    # 模型变更后自动生成新迁移
 ```
 
 ## API 示例
