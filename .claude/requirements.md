@@ -22,3 +22,8 @@ Track **active** requirements only. Git history is the archive — do not keep s
 
 <!-- Active requirements below -->
 
+### Engineering Foundation — 2026-06-02
+**Requirement:** Build a production-ready engineering foundation covering unified responses, business error codes, global exception handling, structured logging, environment-safe configuration, Alembic migration baseline, JWT session hardening, RBAC, i18n, and OpenAPI documentation standards.
+**Change from:** New active requirement.
+**Reason:** The project is evolving from a FastAPI starter template into a maintainable SaaS/backend foundation that future AI agents can implement phase by phase using `docs/engineering-foundation-requirements.md` and `docs/engineering-foundation-design.md`.
+
