@@ -3,12 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from app.auth.dependencies import CurrentUser
-from app.auth.schemas import LoginRequest, RefreshRequest, TokenResponse
+from app.auth.schemas import LoginRequest, MessageResponse, RefreshRequest, TokenResponse
 from app.auth.service import AuthService
 from app.core.limiter import limiter
 from app.core.response import ApiResponse
 from app.db.session import DBSession
-from app.users.repository import UserRepository
 from app.users.schemas import UserRead
 
 router = APIRouter()
@@ -31,7 +30,12 @@ async def login(
     payload: LoginRequest,
     session: DBSession,
 ) -> ApiResponse[TokenResponse]:
-    tokens = await AuthService(UserRepository(session)).login(payload.email, payload.password)
+    tokens = await AuthService(session).login(
+        payload.email,
+        payload.password,
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None,
+    )
     return ApiResponse.ok(tokens)
 
 
@@ -51,8 +55,38 @@ async def refresh(
     payload: RefreshRequest,
     session: DBSession,
 ) -> ApiResponse[TokenResponse]:
-    tokens = await AuthService(UserRepository(session)).refresh(payload.refresh_token)
+    tokens = await AuthService(session).refresh(payload.refresh_token)
     return ApiResponse.ok(tokens)
+
+
+@router.post(
+    "/logout",
+    response_model=ApiResponse[MessageResponse],
+    summary="登出当前会话",
+    description=(
+        "撤销 refresh_token 对应的会话。\n\n"
+        "- 撤销后该 refresh_token 无法再刷新（已签发的 access_token 在到期前仍有效）\n"
+        "- 即使会话不存在或已撤销也返回成功，避免信息泄露"
+    ),
+)
+async def logout(payload: RefreshRequest, session: DBSession) -> ApiResponse[MessageResponse]:
+    await AuthService(session).logout(payload.refresh_token)
+    return ApiResponse.ok(MessageResponse(detail="logged out"))
+
+
+@router.post(
+    "/logout-all",
+    response_model=ApiResponse[MessageResponse],
+    summary="登出全部会话",
+    description=(
+        "撤销当前用户的所有会话。\n\n"
+        "- 请求头需携带 `Authorization: Bearer <access_token>`\n"
+        "- 撤销后所有 refresh_token 均失效，常用于密码泄露后强制下线"
+    ),
+)
+async def logout_all(current_user: CurrentUser, session: DBSession) -> ApiResponse[MessageResponse]:
+    await AuthService(session).logout_all(current_user.id)
+    return ApiResponse.ok(MessageResponse(detail="all sessions revoked"))
 
 
 @router.get(

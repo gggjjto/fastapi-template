@@ -27,9 +27,11 @@ async def test_refresh_rate_limit(client: AsyncClient) -> None:
     login_resp = await client.post("/api/v1/auth/token", json=_LOGIN_PAYLOAD)
     refresh_token = login_resp.json()["data"]["refresh_token"]
 
+    # refresh 会轮换 token，因此每次使用上一次返回的新 token，避免触发复用检测
     for _ in range(20):
         resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
         assert resp.status_code == 200
+        refresh_token = resp.json()["data"]["refresh_token"]
 
     resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert resp.status_code == 429

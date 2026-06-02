@@ -229,11 +229,20 @@ make revision m="describe change"    # 模型变更后自动生成新迁移
 | `GET`  | `/api/v1/users`           | 分页列出用户                           |
 | `GET`  | `/api/v1/users/{user_id}` | 获取用户                             |
 | `POST` | `/api/v1/auth/token`      | 登录，获取 access + refresh token     |
-| `POST` | `/api/v1/auth/refresh`    | 使用 refresh token 换新 access token |
+| `POST` | `/api/v1/auth/refresh`    | 刷新令牌（轮换 refresh token）           |
+| `POST` | `/api/v1/auth/logout`     | 登出当前会话（传 refresh_token）          |
+| `POST` | `/api/v1/auth/logout-all` | 登出该用户全部会话（需登录）                   |
 | `GET`  | `/api/v1/auth/me`         | 获取当前登录用户信息                       |
 
 
 `users` 列表/详情接口在模板中保持公开，便于快速演示。真实业务如果包含敏感用户数据，默认应改为 `CurrentUser` 保护，或增加“仅本人/管理员可见”的依赖。
+
+### 认证与会话
+
+- access token 短期、无状态，仅校验签名与过期，不查库；refresh token 长期且服务端跟踪。
+- 每次登录创建一条 `auth_sessions` 记录，**只存 refresh token 的 sha256 哈希**，不存原始 token。
+- `/auth/refresh` 会**轮换** refresh token（旧的随即失效）；检测到已轮换/已撤销的 token 被复用时，撤销该用户全部会话并返回 401。
+- `/auth/logout` 撤销当前会话，`/auth/logout-all` 撤销该用户全部会话（已签发的 access token 在到期前仍有效，建议保持较短有效期）。
 
 ## 测试
 

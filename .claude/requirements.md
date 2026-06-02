@@ -28,6 +28,13 @@ Track **active** requirements only. Git history is the archive — do not keep s
 **Reason:** The project is evolving from a FastAPI starter template into a maintainable SaaS/backend foundation that future AI agents can implement phase by phase using `docs/engineering-foundation-requirements.md` and `docs/engineering-foundation-design.md`.
 **Decisions:**
 - Response envelope adopts **Option A**: `ApiResponse.code` is a stable **string** business code (`"OK"` / `"USER_NOT_FOUND"` …) plus a new `request_id` field — not the transitional int+`error_code` shape. Chosen because the template has no external API consumers yet.
-- Implementation proceeds **phase by phase**; Phase 1 (error contract + global exception handling) is delivered first, the rest only after sign-off.
-**Phase 1 status (done in code, pending integration-test run):** string error codes, enhanced `DomainError` hierarchy, global `DomainError`/unhandled-`Exception` handlers, `request_id` in envelopes, routers no longer hand-translate domain exceptions, `valid_user_id` raises domain `UserNotFound`.
+- Implementation proceeds **phase by phase**; each phase is a separate commit, the next only after sign-off.
+- **Phase 3 auth decisions:** access tokens stay stateless/short-lived (no per-request DB check); `logout` revokes the current session (refresh_token in body) and `logout-all` revokes all sessions (requires auth); detected refresh-token reuse revokes **all** of the user's sessions.
+
+**Progress (done + green via `make ci`):**
+- Phase 1 — error contract: string error codes, `DomainError` hierarchy, global `DomainError`/unhandled handlers, `request_id` in envelopes, routers no longer hand-translate.
+- Phase 2 — config + migration: production `Settings` fail-fast validation; initial Alembic migration (`users`).
+- Phase 3 — JWT sessions: `auth_sessions` table + migration, refresh rotation, reuse detection, logout / logout-all.
+
+**Remaining:** Phase 4 (RBAC), Phase 5 (i18n + OpenAPI), Phase 6 (logging hardening).
 

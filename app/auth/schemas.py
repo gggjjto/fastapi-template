@@ -16,6 +16,10 @@ class RefreshRequest(CustomModel):
     refresh_token: str = Field(min_length=1, description="登录时颁发的 refresh_token")
 
 
+class MessageResponse(CustomModel):
+    detail: str = Field(description="操作结果说明", examples=["logged out"])
+
+
 class TokenResponse(CustomModel):
     access_token: str = Field(description="短期访问令牌，用于调用受保护接口")
     refresh_token: str = Field(description="长期刷新令牌，用于换取新的 access_token")

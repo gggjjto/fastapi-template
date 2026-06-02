@@ -45,10 +45,12 @@ The app follows a **domain-oriented** structure: each feature domain owns all it
 ```
 app/
 ├── auth/                # JWT auth domain
-│   ├── router.py        # POST /auth/token, /auth/refresh, GET /auth/me
-│   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse
-│   ├── security.py      # hash_password, verify_password, create/decode tokens
-│   ├── service.py       # AuthService (login, refresh)
+│   ├── router.py        # POST /auth/token, /auth/refresh, /auth/logout, /auth/logout-all, GET /auth/me
+│   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse, MessageResponse
+│   ├── models.py        # AuthSession ORM model (auth_sessions)
+│   ├── security.py      # hash_password, verify_password, create/decode tokens, hash_refresh_token
+│   ├── repository.py    # AuthSessionRepository (create/rotate/revoke sessions)
+│   ├── service.py       # AuthService (login, refresh+rotation, logout, logout_all)
 │   ├── dependencies.py  # get_current_user, get_current_active_user, CurrentUser
 │   ├── constants.py     # ErrorCode
 │   └── exceptions.py    # InvalidCredentials, InvalidToken
