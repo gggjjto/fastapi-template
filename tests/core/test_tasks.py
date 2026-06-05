@@ -9,7 +9,7 @@ from __future__ import annotations
 from httpx import AsyncClient
 
 from app.core.arq import get_arq
-from app.worker import example_task
+from app.worker import WorkerSettings, example_task, scheduled_maintenance_task
 
 
 async def test_example_task_returns_expected_message() -> None:
@@ -18,6 +18,28 @@ async def test_example_task_returns_expected_message() -> None:
     result = await example_task(ctx, "hello")
 
     assert "hello" in result
+
+
+async def test_scheduled_maintenance_task_returns_expected_message() -> None:
+    ctx = {"job_id": "cron-123"}
+
+    result = await scheduled_maintenance_task(ctx)
+
+    assert result == "scheduled maintenance completed"
+
+
+def test_worker_registers_scheduled_maintenance_cron_job() -> None:
+    cron_job = WorkerSettings.cron_jobs[0]
+
+    assert scheduled_maintenance_task in WorkerSettings.functions
+    assert cron_job.name == "scheduled_maintenance_daily"
+    assert cron_job.coroutine is scheduled_maintenance_task
+    assert cron_job.hour == 3
+    assert cron_job.minute == 0
+    assert cron_job.second == 0
+    assert cron_job.unique is True
+    assert cron_job.timeout_s == 300
+    assert cron_job.max_tries == 3
 
 
 async def test_arq_pool_initialized_in_lifespan(client: AsyncClient) -> None:

@@ -13,7 +13,7 @@
 
 ## 简介
 
-`fastapi-template` 是一个**按领域（domain-oriented）组织**的 FastAPI 后端脚手架，开箱提供生产环境常见基础设施：JWT 认证、Redis 缓存、Arq 任务队列、结构化日志、全局异常处理、限流、健康探针、统一响应格式，以及完整的测试与 CI 流程。
+`fastapi-template` 是一个**按领域（domain-oriented）组织**的 FastAPI 后端脚手架，开箱提供生产环境常见基础设施：JWT 认证、Redis 缓存、Arq 任务队列与周期任务、结构化日志、全局异常处理、限流、健康探针、统一响应格式，以及完整的测试与 CI 流程。
 
 适合用作：
 
@@ -48,7 +48,7 @@
 - **领域分层**：`router` / `service` / `repository` / `model` / `schemas`
 - **统一响应封装** `ApiResponse[T]`：`{code, message, data, request_id}` 结构，`code` 为稳定字符串业务码
 - **全局异常处理** + 领域异常（`DomainError` 携带 `code`/`status_code`，全局处理器统一转换）
-- **Redis 缓存** + **Arq 任务队列**（可选，通过 `APP_REDIS_URL` 开关）
+- **Redis 缓存** + **Arq 任务队列 / 周期任务**（可选，通过 `APP_REDIS_URL` 开关）
 - **限流**（slowapi）+ **结构化日志**（structlog，JSON 可选，自动遮蔽密码/令牌等敏感字段）
 - **Request ID** 中间件：注入 `X-Request-ID`、绑定 `request_id`/`user_id` 到日志上下文，并为每个请求输出一条 `http.request` 访问日志
 - **Sentry** 错误追踪（可选）
@@ -66,7 +66,7 @@
 | Web 框架        | FastAPI, Pydantic v2                         |
 | ORM / 迁移      | SQLAlchemy 2.0 (async), Alembic              |
 | 数据库           | PostgreSQL（生产） / SQLite（快速启动）                |
-| 缓存 / 队列       | Redis, Arq                                   |
+| 缓存 / 队列 / 定时任务 | Redis, Arq                                   |
 | 认证            | PyJWT, bcrypt                                |
 | 日志            | structlog                                    |
 | 限流            | slowapi                                      |
@@ -114,7 +114,7 @@ cp .env.example .env
 docker compose up
 ```
 
-启动后会同时拉起 API + PostgreSQL + Redis。适合本地验证生产路径。
+启动后会同时拉起 API + Worker + PostgreSQL + Redis。适合本地验证生产路径。
 
 ## 项目结构
 
@@ -165,6 +165,7 @@ app/
 - **环境变量**：一律 `APP_` 前缀，通过 `get_settings()`（LRU 单例）访问。
 - **数据库会话**：使用 `DBSession` 类型别名，由 `get_db_session()` 依赖注入。
 - **Redis / Arq**：仅当 `APP_REDIS_URL` 非空时启用；使用 `RedisClient` / `ArqPool` 类型别名。
+- **周期任务**：使用 `app/worker.py` 的 `WorkerSettings.cron_jobs` 注册 Arq cron job；worker 必须作为独立进程运行，且执行时间取决于 worker 进程时区。
 - **限流**：使用 `@limiter.limit("N/period")` 装饰器，**首个参数必须是 `request: Request`**。
 - **认证保护**：`CurrentUser = Annotated[User, Depends(get_current_active_user)]`。
 - **异常分层**：Service / 领域守卫依赖抛 `DomainError` 子类（携带稳定 `code` 与 `status_code`），由全局处理器统一转换为响应信封；Router **不再手写** `try/except` 翻译领域异常。Token 解码等通用守卫仍可抛 `HTTPException`。
@@ -269,6 +270,33 @@ curl -H "Accept-Language: zh-CN" -X POST .../api/v1/auth/token -d '{"email":"x@e
 - 每次登录创建一条 `auth_sessions` 记录，**只存 refresh token 的 sha256 哈希**，不存原始 token。
 - `/auth/refresh` 会**轮换** refresh token（旧的随即失效）；检测到已轮换/已撤销的 token 被复用时，撤销该用户全部会话并返回 401。
 - `/auth/logout` 撤销当前会话，`/auth/logout-all` 撤销该用户全部会话（已签发的 access token 在到期前仍有效，建议保持较短有效期）。
+
+### 后台任务与周期任务
+
+后台队列和周期任务统一使用 Arq，依赖 Redis。API 进程只负责通过 `ArqPool` 入队；worker 进程负责消费队列和触发 `cron_jobs`。
+
+```bash
+# 本地单独启动 worker
+APP_REDIS_URL=redis://localhost:6379/0 uv run arq app.worker.WorkerSettings
+
+# 完整本地栈会同时启动 api / worker / PostgreSQL / Redis
+docker compose up
+```
+
+新增普通后台任务：
+
+1. 在 `app/worker.py` 新增 async 任务函数，首参为 `ctx: dict`。
+2. 把函数加入 `WorkerSettings.functions`。
+3. 在 API service/router 中注入 `queue: ArqPool` 后调用 `await queue.enqueue_job("task_name", ...)`。
+
+新增周期任务：
+
+1. 在 `app/worker.py` 新增 async 任务函数。
+2. 同时加入 `WorkerSettings.functions` 和 `WorkerSettings.cron_jobs`。
+3. 用 `arq.cron(...)` 声明计划时间，例如当前示例 `scheduled_maintenance_daily` 每天 `03:00:00` 执行。
+4. 为任务函数和 cron 注册写测试，避免重命名函数后忘记更新 worker 配置。
+
+生产环境建议将 API 与 worker 部署为两个独立进程或两个独立容器。若任务依赖数据库，也要给 worker 配置同一套 `APP_DATABASE_URL` / 迁移流程；不要在 API 进程里启动阻塞式调度器。
 
 ## 测试
 
