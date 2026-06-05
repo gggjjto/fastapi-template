@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.core.error_codes import CommonErrorCode
 from app.core.exceptions import DomainError
 from app.core.i18n import negotiate_locale, translate
+from app.core.request_context import get_request_context
 
 logger = structlog.get_logger(__name__)
 
@@ -27,8 +28,8 @@ _HTTP_CODE_MAP: dict[int, str] = {
 
 
 def _current_request_id() -> str | None:
-    """读取 RequestIDMiddleware 绑定到 structlog 上下文的 request_id。"""
-    request_id = structlog.contextvars.get_contextvars().get("request_id")
+    """读取 RequestIDMiddleware 绑定到请求上下文的 request_id。"""
+    request_id = get_request_context().get("request_id")
     return request_id if isinstance(request_id, str) else None
 
 

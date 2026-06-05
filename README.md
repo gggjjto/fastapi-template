@@ -48,8 +48,8 @@
 - **统一响应封装** `ApiResponse[T]`：`{code, message, data, request_id}` 结构，`code` 为稳定字符串业务码
 - **全局异常处理** + 领域异常（`DomainError` 携带 `code`/`status_code`，全局处理器统一转换）
 - **Redis 缓存** + **Arq 任务队列**（可选，通过 `APP_REDIS_URL` 开关）
-- **限流**（slowapi）+ **结构化日志**（structlog，JSON 可选）
-- **Request ID** 中间件，全链路日志绑定
+- **限流**（slowapi）+ **结构化日志**（structlog，JSON 可选，自动遮蔽密码/令牌等敏感字段）
+- **Request ID** 中间件：注入 `X-Request-ID`、绑定 `request_id`/`user_id` 到日志上下文，并为每个请求输出一条 `http.request` 访问日志
 - **Sentry** 错误追踪（可选）
 - **健康探针**：`/live`、`/ready`（用于 K8s liveness / readiness）
 - **可配置文档可见性**：非 dev/test 环境自动隐藏 OpenAPI
@@ -139,13 +139,14 @@ app/
 │   ├── config.py           # pydantic-settings，所有 env 前缀 APP_
 │   ├── response.py         # ApiResponse[T] 统一响应
 │   ├── error_handlers.py   # 全局错误处理
-│   ├── middleware.py       # RequestID 中间件
+│   ├── middleware.py       # RequestID 中间件 + http.request 访问日志
 │   ├── limiter.py          # slowapi 限流
 │   ├── pagination.py       # 通用分页
 │   ├── cache.py            # RedisCache 封装
 │   ├── arq.py              # Arq 连接池生命周期
 │   ├── sentry.py           # Sentry 初始化
-│   └── logging.py          # structlog 配置
+│   ├── logging.py          # structlog 配置 + 敏感字段遮蔽处理器
+│   └── request_context.py  # 绑定/读取 request_id、user_id 等日志上下文
 ├── db/
 │   ├── base.py             # DeclarativeBase + 命名约定
 │   ├── session.py          # async engine / session / reset_db

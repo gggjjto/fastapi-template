@@ -11,6 +11,7 @@ from app.auth import constants as auth_constants
 from app.auth.repository import RbacRepository
 from app.auth.security import decode_access_token
 from app.core.exceptions import ForbiddenError
+from app.core.request_context import bind_user_id
 from app.db.session import DBSession
 from app.users.models import User
 from app.users.repository import UserRepository
@@ -35,6 +36,7 @@ async def get_current_user(session: DBSession, token: CurrentToken) -> User:
     user = await UserRepository(session).get_by_id(UUID(payload["sub"]))
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    bind_user_id(str(user.id))  # 后续日志（含访问日志）自动携带 user_id
     return user
 
 
