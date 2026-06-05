@@ -1,4 +1,4 @@
-.PHONY: help install dev lint lint-fix format format-check typecheck test cov ci \
+.PHONY: help install dev lint lint-fix format format-check typecheck test cov ci check-ai \
         test-up test-down migrate revision docker-build docker-run clean
 
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "  format         Run ruff format"
 	@echo "  format-check   Check formatting (CI-friendly)"
 	@echo "  typecheck      Run mypy"
+	@echo "  check-ai       Guard .agents as the AI workflow source of truth"
 	@echo "  test           Run pytest (requires test-up services)"
 	@echo "  cov            Run pytest with coverage"
 	@echo "  ci             Run all CI checks locally (lint + format-check + typecheck + cov)"
@@ -42,13 +43,16 @@ format-check:
 typecheck:
 	uv run mypy app
 
+check-ai:
+	uv run python scripts/check_ai_workflow.py
+
 test:
 	uv run pytest
 
 cov:
 	uv run pytest --cov --cov-report=term-missing --cov-report=xml
 
-ci: lint format-check typecheck cov
+ci: lint format-check typecheck check-ai cov
 
 test-up:
 	docker compose -f docker-compose.test.yml up -d --wait

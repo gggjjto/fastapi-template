@@ -45,6 +45,9 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
+      - name: AI workflow guard
+        run: uv run python scripts/check_ai_workflow.py
+
   typecheck:
     name: Type Check (mypy)
     runs-on: ubuntu-latest

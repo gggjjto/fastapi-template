@@ -12,9 +12,6 @@ htmlcov/
 .env
 .DS_Store
 
-# Claude Code 本地个人设置（不含共享的 slash commands）
-.claude/settings.local.json
-
 # Editor / IDE
 .idea/
 .vscode/
