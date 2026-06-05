@@ -35,7 +35,7 @@ make test-down
 
 ## 代码约定
 
-- 目录结构采用 domain-oriented 组织（见 `CLAUDE.md`）
+- 目录结构采用 domain-oriented 组织（见 `AGENTS.md`）
 - 新增 API 时补充 `summary`、`description`、`response_model`
 - 输入输出 schema 使用 `Field(description=..., examples=[...])`
 - 优先小改动、可验证、可回退
