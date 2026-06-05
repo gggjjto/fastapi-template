@@ -45,12 +45,15 @@ The app follows a **domain-oriented** structure: each feature domain owns all it
 ```
 app/
 ├── auth/                # JWT auth domain
-│   ├── router.py        # POST /auth/token, /auth/refresh, GET /auth/me
-│   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse
-│   ├── security.py      # hash_password, verify_password, create/decode tokens
-│   ├── service.py       # AuthService (login, refresh)
-│   ├── dependencies.py  # get_current_user, get_current_active_user, CurrentUser
-│   ├── constants.py     # ErrorCode
+│   ├── router.py        # POST /auth/token, /auth/refresh, /auth/logout, /auth/logout-all, GET /auth/me
+│   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse, MessageResponse
+│   ├── models.py        # AuthSession + RBAC models (Role, Permission, UserRole, RolePermission)
+│   ├── security.py      # hash_password, verify_password, create/decode tokens, hash_refresh_token
+│   ├── repository.py    # AuthSessionRepository + RbacRepository (permission resolution, role assignment)
+│   ├── seed.py          # ensure_default_rbac() — idempotent permission/role seeding at startup
+│   ├── service.py       # AuthService (login, refresh+rotation, logout, logout_all)
+│   ├── dependencies.py  # get_current_user, get_current_active_user, CurrentUser, RequirePermission
+│   ├── constants.py     # ErrorCode, Permission (roles:*), RoleName
 │   └── exceptions.py    # InvalidCredentials, InvalidToken
 ├── users/               # One directory per domain
 │   ├── router.py        # HTTP handlers only — no business logic
@@ -66,16 +69,20 @@ app/
 ├── core/
 │   ├── config.py        # pydantic-settings; all env vars prefixed APP_
 │   ├── schemas.py       # CustomModel base (populate_by_name, from_attributes)
-│   ├── response.py      # ApiResponse[T] — unified {code, message, data} envelope
+│   ├── response.py      # ApiResponse[T] — unified {code, message, data, request_id} envelope (code is a string business code)
+│   ├── error_codes.py   # CommonErrorCode — cross-domain stable string error codes
 │   ├── pagination.py    # PaginationParams dependency + Page[T] generic model
-│   ├── exceptions.py    # Base exceptions (DomainError, ConflictError)
-│   ├── error_handlers.py# Global HTTP + validation error handlers
-│   ├── middleware.py    # RequestIDMiddleware (X-Request-ID header + structlog bind)
+│   ├── exceptions.py    # DomainError hierarchy (carries code/status_code/message_key) + BadRequest/Unauthorized/Forbidden/NotFound/Conflict/ValidationDomain
+│   ├── error_handlers.py# Global handlers: DomainError (+ i18n message), HTTPException, validation, unhandled Exception fallback
+│   ├── i18n.py          # locale negotiation + message catalog lookup (locales/*.json)
+│   ├── openapi.py       # ErrorResponse model + error_responses() reusable OpenAPI helper
+│   ├── middleware.py    # RequestIDMiddleware (X-Request-ID header + bind request_id + http.request access log)
+│   ├── request_context.py# bind/read request_id, user_id, tenant_id via structlog contextvars
 │   ├── limiter.py       # slowapi Limiter instance + 429 handler
 │   ├── sentry.py        # init_sentry() — no-op when APP_SENTRY_DSN is empty
 │   ├── cache.py         # RedisCache helper (get/set/delete/get_or_set)
 │   ├── arq.py           # Arq pool lifecycle + ArqPool dependency alias
-│   └── logging.py       # structlog configuration
+│   └── logging.py       # structlog configuration + redact_sensitive processor
 ├── db/
 │   ├── base.py          # DeclarativeBase with SQLAlchemy naming_convention
 │   ├── session.py       # Engine, DBSession type alias, init_db/reset_db

@@ -5,10 +5,24 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 from httpx import AsyncClient
+from sqlalchemy import func, select
 
+from app.auth.models import AuthSession
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
 from app.users.repository import UserRepository
+
+
+async def _active_session_count(user_id: uuid.UUID) -> int:
+    async with AsyncSessionLocal() as session:
+        return (
+            await session.execute(
+                select(func.count())
+                .select_from(AuthSession)
+                .where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
+            )
+        ).scalar_one()
+
 
 _settings = get_settings()
 
@@ -45,7 +59,7 @@ async def test_login_wrong_password(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 401
-    assert resp.json()["code"] == 401
+    assert resp.json()["code"] == "AUTH_INVALID_CREDENTIALS"
 
 
 async def test_login_unknown_email(client: AsyncClient) -> None:
@@ -65,7 +79,7 @@ async def test_get_me(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 200
-    assert resp.json()["code"] == 200
+    assert resp.json()["code"] == "OK"
     user = resp.json()["data"]
     assert user["email"] == _EMAIL
     assert "hashed_password" not in user
@@ -171,4 +185,88 @@ async def test_get_me_inactive_user(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 403
-    assert resp.json()["code"] == 403
+    assert resp.json()["code"] == "FORBIDDEN"
+
+
+# ── Phase 3: server-side session tracking, rotation, logout ───────────────────
+
+
+async def test_login_creates_session(client: AsyncClient) -> None:
+    user = await _register(client)
+    await _login(client)
+    assert await _active_session_count(uuid.UUID(user["id"])) == 1
+
+
+async def test_refresh_rotates_and_old_token_is_rejected(client: AsyncClient) -> None:
+    await _register(client)
+    tokens = await _login(client)
+    old_refresh = tokens["refresh_token"]
+
+    resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    assert resp.status_code == 200
+    new_refresh = resp.json()["data"]["refresh_token"]
+    assert new_refresh != old_refresh
+
+    # 复用已轮换的旧 token → 401，并触发撤销该用户全部会话
+    reuse = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    assert reuse.status_code == 401
+    assert reuse.json()["code"] == "AUTH_INVALID_TOKEN"
+
+    # 复用检测后，刚轮换出的新 token 也随之失效
+    after = await client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh})
+    assert after.status_code == 401
+
+
+async def test_logout_revokes_session(client: AsyncClient) -> None:
+    user = await _register(client)
+    tokens = await _login(client)
+
+    resp = await client.post("/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]})
+    assert resp.status_code == 200
+    assert resp.json()["code"] == "OK"
+    assert await _active_session_count(uuid.UUID(user["id"])) == 0
+
+    # 撤销后的会话无法再刷新
+    refresh = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert refresh.status_code == 401
+
+
+async def test_logout_is_idempotent_and_tolerates_unknown_token(client: AsyncClient) -> None:
+    await _register(client)
+    tokens = await _login(client)
+
+    for _ in range(2):
+        resp = await client.post(
+            "/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]}
+        )
+        assert resp.status_code == 200
+
+    unknown = await client.post("/api/v1/auth/logout", json={"refresh_token": "not.a.token"})
+    assert unknown.status_code == 200
+
+
+async def test_logout_all_revokes_every_session(client: AsyncClient) -> None:
+    user = await _register(client)
+    first = await _login(client)
+    second = await _login(client)
+    assert await _active_session_count(uuid.UUID(user["id"])) == 2
+
+    resp = await client.post(
+        "/api/v1/auth/logout-all",
+        headers={"Authorization": f"Bearer {second['access_token']}"},
+    )
+    assert resp.status_code == 200
+    assert await _active_session_count(uuid.UUID(user["id"])) == 0
+
+    for tokens in (first, second):
+        refresh = await client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+        )
+        assert refresh.status_code == 401
+
+
+async def test_logout_all_requires_authentication(client: AsyncClient) -> None:
+    resp = await client.post("/api/v1/auth/logout-all")
+    assert resp.status_code == 401

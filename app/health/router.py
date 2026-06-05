@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 from sqlalchemy import text
 
 from app.core.config import get_settings
+from app.core.openapi import error_responses
 from app.core.response import ApiResponse
 from app.db.session import DBSession
 
@@ -33,6 +34,7 @@ async def live() -> ApiResponse[dict[str, str]]:
         "Kubernetes 通过此接口判断容器是否可以接收流量。"
         "数据库或 Redis 不可达时返回 500。"
     ),
+    responses=error_responses(status.HTTP_500_INTERNAL_SERVER_ERROR),
 )
 async def ready(session: DBSession) -> ApiResponse[dict[str, str]]:
     await session.execute(text("SELECT 1"))

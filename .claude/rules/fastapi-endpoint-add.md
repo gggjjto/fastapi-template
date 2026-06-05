@@ -20,7 +20,7 @@ Before editing, identify:
 - Include `summary`, `description`, and `response_model` on every route decorator.
 - Use `responses=` for expected non-200 outcomes such as 400, 401, 403, 404, 409, and 422.
 - Return `ApiResponse.ok(data)` for success.
-- Catch domain exceptions at the router boundary and convert them to HTTP responses.
+- Do not catch domain exceptions in the router — let them propagate to the global `DomainError` handler, which maps `code` + `status_code` into the response envelope.
 
 ## Service and repository rules
 

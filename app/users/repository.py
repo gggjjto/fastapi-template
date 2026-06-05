@@ -20,6 +20,9 @@ class UserRepository:
         result = await self.session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
+    async def count(self) -> int:
+        return (await self.session.execute(select(func.count()).select_from(User))).scalar_one()
+
     async def list_users(self, limit: int, offset: int) -> tuple[list[User], int]:
         total = (await self.session.execute(select(func.count()).select_from(User))).scalar_one()
         users = list(

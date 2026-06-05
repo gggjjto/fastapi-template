@@ -13,7 +13,7 @@ This project uses top-level `app/`; it is equivalent to the `src/` directory use
 
 ## Response envelope
 
-All endpoints return `ApiResponse[T]`: `{"code": 200, "message": "success", "data": {...}}`. Use `ApiResponse.ok(data)` in routers. Errors: `{"code": 4xx, "message": "...", "data": null}`.
+All endpoints return `ApiResponse[T]`: `{"code": "OK", "message": "success", "data": {...}, "request_id": "..."}`. `code` is a stable **string** business code. Use `ApiResponse.ok(data)` in routers. Error envelopes are produced by the global handlers, never hand-built in routers: `{"code": "USER_NOT_FOUND", "message": "...", "data": null, "request_id": "..."}`.
 
 This consistency is intentional even though FastAPI validates against `response_model` after the router builds the response object. For extremely hot endpoints, measure first before bypassing the envelope.
 
@@ -31,7 +31,7 @@ This consistency is intentional even though FastAPI validates against `response_
 
 ## Dependencies
 
-- Resource-loading deps raise `HTTPException` directly. Domain services raise `DomainError` subclasses.
+- Domain services and resource-loading guards raise `DomainError` subclasses (which carry a stable `code` + `status_code`); the global handler converts them. Generic protocol guards (e.g. token decoding) may still raise `HTTPException`.
 - Chain dependencies freely — FastAPI caches per-request, no overhead.
 - Auth guard: `CurrentUser = Annotated[User, Depends(get_current_active_user)]`.
 - Public endpoints must be intentional. Any endpoint that reads user, tenant, billing, or private domain data should default to `CurrentUser` or a narrower guard.

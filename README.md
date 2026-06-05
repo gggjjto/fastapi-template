@@ -45,11 +45,11 @@
 - **异步 SQLAlchemy 2.0** + **Alembic** 迁移
 - **JWT 认证**（access / refresh token）+ 受保护路由依赖
 - **领域分层**：`router` / `service` / `repository` / `model` / `schemas`
-- **统一响应封装** `ApiResponse[T]`：`{code, message, data}` 结构
-- **全局异常处理** + 领域异常（`DomainError`、`ConflictError`...）
+- **统一响应封装** `ApiResponse[T]`：`{code, message, data, request_id}` 结构，`code` 为稳定字符串业务码
+- **全局异常处理** + 领域异常（`DomainError` 携带 `code`/`status_code`，全局处理器统一转换）
 - **Redis 缓存** + **Arq 任务队列**（可选，通过 `APP_REDIS_URL` 开关）
-- **限流**（slowapi）+ **结构化日志**（structlog，JSON 可选）
-- **Request ID** 中间件，全链路日志绑定
+- **限流**（slowapi）+ **结构化日志**（structlog，JSON 可选，自动遮蔽密码/令牌等敏感字段）
+- **Request ID** 中间件：注入 `X-Request-ID`、绑定 `request_id`/`user_id` 到日志上下文，并为每个请求输出一条 `http.request` 访问日志
 - **Sentry** 错误追踪（可选）
 - **健康探针**：`/live`、`/ready`（用于 K8s liveness / readiness）
 - **可配置文档可见性**：非 dev/test 环境自动隐藏 OpenAPI
@@ -139,13 +139,14 @@ app/
 │   ├── config.py           # pydantic-settings，所有 env 前缀 APP_
 │   ├── response.py         # ApiResponse[T] 统一响应
 │   ├── error_handlers.py   # 全局错误处理
-│   ├── middleware.py       # RequestID 中间件
+│   ├── middleware.py       # RequestID 中间件 + http.request 访问日志
 │   ├── limiter.py          # slowapi 限流
 │   ├── pagination.py       # 通用分页
 │   ├── cache.py            # RedisCache 封装
 │   ├── arq.py              # Arq 连接池生命周期
 │   ├── sentry.py           # Sentry 初始化
-│   └── logging.py          # structlog 配置
+│   ├── logging.py          # structlog 配置 + 敏感字段遮蔽处理器
+│   └── request_context.py  # 绑定/读取 request_id、user_id 等日志上下文
 ├── db/
 │   ├── base.py             # DeclarativeBase + 命名约定
 │   ├── session.py          # async engine / session / reset_db
@@ -159,13 +160,13 @@ app/
 
 > 更详细约定见 [CLAUDE.md](./CLAUDE.md)。
 
-- **响应格式**：所有接口返回 `ApiResponse[T]`，即 `{"code": 200, "message": "success", "data": ...}`。路由中使用 `ApiResponse.ok(data)`。
+- **响应格式**：所有接口返回 `ApiResponse[T]`，即 `{"code": "OK", "message": "success", "data": ..., "request_id": "..."}`。路由中使用 `ApiResponse.ok(data)`。错误响应由全局处理器生成，`code` 为稳定业务码（如 `USER_NOT_FOUND`、`AUTH_INVALID_CREDENTIALS`、`VALIDATION_ERROR`），`data` 为 `null`，并尽可能带上 `request_id`。`code` 是 API 契约，不被本地化；可本地化的是 `message`。
 - **环境变量**：一律 `APP_` 前缀，通过 `get_settings()`（LRU 单例）访问。
 - **数据库会话**：使用 `DBSession` 类型别名，由 `get_db_session()` 依赖注入。
 - **Redis / Arq**：仅当 `APP_REDIS_URL` 非空时启用；使用 `RedisClient` / `ArqPool` 类型别名。
 - **限流**：使用 `@limiter.limit("N/period")` 装饰器，**首个参数必须是 `request: Request`**。
 - **认证保护**：`CurrentUser = Annotated[User, Depends(get_current_active_user)]`。
-- **异常分层**：Service 抛 `DomainError` 子类，Dependencies 直接抛 `HTTPException`，Router 负责把领域异常转为 HTTP 响应。
+- **异常分层**：Service / 领域守卫依赖抛 `DomainError` 子类（携带稳定 `code` 与 `status_code`），由全局处理器统一转换为响应信封；Router **不再手写** `try/except` 翻译领域异常。Token 解码等通用守卫仍可抛 `HTTPException`。
 - **Pydantic 基类**：所有 Schema 继承 `CustomModel`（`populate_by_name=True`, `from_attributes=True`）。
 - **文档可见性**：非 `development` / `test` 环境自动隐藏 OpenAPI（`openapi_url=None`）。
 - **响应取舍**：统一 `ApiResponse[T]` 会让 FastAPI 按 `response_model` 再做一次响应校验；模板优先保证响应结构一致，性能极敏感接口可单独评估。
@@ -188,9 +189,22 @@ app/
 | `APP_SENTRY_DSN`                  | *(空)*                          | 留空则关闭 Sentry                                                  |
 | `APP_LOG_JSON`                    | `false`                        | 结构化日志输出为 JSON                                                 |
 | `APP_ALLOWED_ORIGINS`             | `["*"]`                        | CORS 白名单，逗号分隔                                                 |
+| `APP_DEFAULT_LOCALE`              | `en-US`                        | 错误消息默认语言（`en-US` / `zh-CN`）                                  |
 
 
 完整列表见 `[app/core/config.py](./app/core/config.py)` 与 `[.env.example](./.env.example)`。
+
+### 生产环境安全校验
+
+当 `APP_ENV=production` 时，应用在**启动阶段 fail-fast**，下列任一不安全配置都会直接拒绝启动（见 `Settings._validate_production_safety`）：
+
+- `APP_JWT_SECRET` 不能为默认值，必须是高强度随机密钥。
+- `APP_ALLOWED_ORIGINS` 不能为通配符 `["*"]`，必须显式列出受信任来源。
+- `APP_DB_CREATE_TABLES_ON_STARTUP` 必须为 `false`，生产通过 Alembic 迁移建表。
+- `APP_DATABASE_URL` 必须使用 PostgreSQL。
+- `APP_LOG_JSON` 必须为 `true`，输出 JSON 结构化日志。
+
+开发 / 测试环境不触发该校验，保持开箱即用。OpenAPI 文档在非 `development` / `test` 环境默认隐藏。
 
 ### 切换到 PostgreSQL
 
@@ -199,11 +213,11 @@ APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/app
 APP_DB_CREATE_TABLES_ON_STARTUP=false
 ```
 
-然后使用 Alembic：
+仓库已包含初始迁移（`alembic/versions/`），直接升级即可建表；后续模型变更用 `make revision` 自动生成新迁移：
 
 ```bash
-uv run alembic revision --autogenerate -m "init"
-uv run alembic upgrade head
+uv run alembic upgrade head          # 应用迁移（首次即建表）
+make revision m="describe change"    # 模型变更后自动生成新迁移
 ```
 
 ## API 示例
@@ -217,11 +231,43 @@ uv run alembic upgrade head
 | `GET`  | `/api/v1/users`           | 分页列出用户                           |
 | `GET`  | `/api/v1/users/{user_id}` | 获取用户                             |
 | `POST` | `/api/v1/auth/token`      | 登录，获取 access + refresh token     |
-| `POST` | `/api/v1/auth/refresh`    | 使用 refresh token 换新 access token |
+| `POST` | `/api/v1/auth/refresh`    | 刷新令牌（轮换 refresh token）           |
+| `POST` | `/api/v1/auth/logout`     | 登出当前会话（传 refresh_token）          |
+| `POST` | `/api/v1/auth/logout-all` | 登出该用户全部会话（需登录）                   |
 | `GET`  | `/api/v1/auth/me`         | 获取当前登录用户信息                       |
 
 
-`users` 列表/详情接口在模板中保持公开，便于快速演示。真实业务如果包含敏感用户数据，默认应改为 `CurrentUser` 保护，或增加“仅本人/管理员可见”的依赖。
+`users` 列表/详情接口需要 `users:read` 权限（见下文 RBAC）；注册（`POST /users`）保持公开以支持自助注册与引导。
+
+### 权限（RBAC）
+
+- 模型：`roles` / `permissions` / `user_roles` / `role_permissions`，权限码格式 `resource:action`（如 `users:read`）。
+- 路由用 `Depends(RequirePermission("users:read"))` 声明所需权限：未认证 401，已认证但无权限 403（`AUTH_PERMISSION_DENIED`）。
+- 启动时**幂等播种**权限目录与 `admin`（全权限）/`user`（暂无权限）两个角色（`app/auth/seed.py`），生产经迁移建表后启动即填充。
+- **引导**：第一个注册的用户自动成为 `admin`，之后的用户默认 `user`。需要更多角色/分配时，扩展 `RbacRepository` 或后续加管理接口。
+
+### 错误消息本地化（i18n）
+
+- 错误**码**（如 `USER_NOT_FOUND`）是稳定契约，**永不翻译**；可本地化的只有 `message`。
+- 领域异常携带 `message_key`，全局处理器按 `Accept-Language` 协商语言（用户偏好 → `Accept-Language` → `APP_DEFAULT_LOCALE`）后翻译消息。
+- 目录在 `locales/{en-US,zh-CN}.json`；缺失翻译回退默认语言，再缺失用异常自带英文消息。
+
+```bash
+curl -H "Accept-Language: zh-CN" -X POST .../api/v1/auth/token -d '{"email":"x@e.com","password":"wrongpass"}'
+# {"code":"AUTH_INVALID_CREDENTIALS","message":"邮箱或密码错误","data":null,"request_id":"..."}
+```
+
+### OpenAPI 文档标准
+
+- 每个路由都声明 `summary` / `description` / `response_model` / `tags`，并用 `app/core/openapi.py` 的 `error_responses(...)` 复用统一的 `ErrorResponse` 错误信封。
+- 受保护接口在 OpenAPI 中携带 Bearer 认证元数据；非 `development` / `test` 环境默认隐藏文档。
+
+### 认证与会话
+
+- access token 短期、无状态，仅校验签名与过期，不查库；refresh token 长期且服务端跟踪。
+- 每次登录创建一条 `auth_sessions` 记录，**只存 refresh token 的 sha256 哈希**，不存原始 token。
+- `/auth/refresh` 会**轮换** refresh token（旧的随即失效）；检测到已轮换/已撤销的 token 被复用时，撤销该用户全部会话并返回 401。
+- `/auth/logout` 撤销当前会话，`/auth/logout-all` 撤销该用户全部会话（已签发的 access token 在到期前仍有效，建议保持较短有效期）。
 
 ## 测试
 
