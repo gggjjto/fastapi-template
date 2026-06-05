@@ -32,6 +32,7 @@
 - [API 示例](#api-示例)
 - [测试](#测试)
 - [开发](#开发)
+- [AI 开发工作流](#ai-开发工作流)
 - [Docker 部署](#docker-部署)
 - [CI/CD](#cicd)
 - [路线图](#路线图)
@@ -78,7 +79,7 @@
 | CI/CD         | GitHub Actions, Dependabot                   |
 
 
-实践参考：[zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)。该仓库示例使用 `src/` 作为应用目录；本模板使用 `app/`，语义等价。面向 AI 的精简规则也可参考其 [AGENTS.md](https://github.com/zhanymkanov/fastapi-best-practices/blob/master/AGENTS.md)，本项目规则以 `.claude/rules/` 为准。
+实践参考：[zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)。该仓库示例使用 `src/` 作为应用目录；本模板使用 `app/`，语义等价。面向 AI 的精简规则也可参考其 [AGENTS.md](https://github.com/zhanymkanov/fastapi-best-practices/blob/master/AGENTS.md)，本项目规则以 `.agents/rules/` 为准。
 
 ## 快速开始
 
@@ -158,7 +159,7 @@ app/
 
 ## 核心约定
 
-> 更详细约定见 [CLAUDE.md](./CLAUDE.md)。
+> 更详细约定见 [AGENTS.md](./AGENTS.md)。
 
 - **响应格式**：所有接口返回 `ApiResponse[T]`，即 `{"code": "OK", "message": "success", "data": ..., "request_id": "..."}`。路由中使用 `ApiResponse.ok(data)`。错误响应由全局处理器生成，`code` 为稳定业务码（如 `USER_NOT_FOUND`、`AUTH_INVALID_CREDENTIALS`、`VALIDATION_ERROR`），`data` 为 `null`，并尽可能带上 `request_id`。`code` 是 API 契约，不被本地化；可本地化的是 `message`。
 - **环境变量**：一律 `APP_` 前缀，通过 `get_settings()`（LRU 单例）访问。
@@ -324,6 +325,20 @@ uv run pre-commit install
 ```
 
 安装后，每次 `git commit` 会运行 **pre-commit** 中的检查（与 `.pre-commit-config.yaml` 一致：当前为 `ruff check`、`ruff format`、**mypy `app`**）。完整测试与 CI 一致请用 `make ci`（集成测试需先有 PostgreSQL + Redis，见上文「运行测试」）。
+
+## AI 开发工作流
+
+本项目使用 `.agents/` 作为 AI 开发规则的统一入口：
+
+- `.agents/skills/` — 项目工作流与社区 skills
+- `.agents/rules/` — 可复用项目规则
+- `.agents/requirements.md` — 当前活跃需求与决策记录
+
+社区 skills 通过 `npx skills` 管理，安装时使用 `--agent codex --copy -y`
+以写入 `.agents/skills/` 并更新 `skills-lock.json`。完整命令见
+[.agents/README.md](./.agents/README.md)。
+
+重要 AI 工作流和架构决策记录在 [docs/adr/](./docs/adr/)。
 
 ## Docker 部署
 
