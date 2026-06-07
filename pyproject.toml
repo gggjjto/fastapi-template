@@ -47,7 +47,7 @@ dependencies = [
 dev = [
   "httpx>=0.28.0,<1.0.0",
   # pytest 8/9 都支持；pytest-asyncio 1.x 对应 pytest 9，保持上限让 Dependabot 可统一升级
-  "pytest>=8.3.0,<10.0.0",
+  "pytest>=9.0.3,<10.0.0",
   "pytest-asyncio>=0.26.0,<2.0.0",
   "ruff>=0.11.0,<1.0.0",
   "mypy>=1.15.0,<2.0.0",
