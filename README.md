@@ -397,7 +397,8 @@ docker run --rm -p 8000:8000 \
 
 | 工作流                                              | 触发                 | 作用                                                                                                   |
 | ------------------------------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------- |
-| `[ci.yml](./.github/workflows/ci.yml)`           | push / PR → `main` | Ruff lint + format、mypy、pytest + 覆盖率（PG + Redis services）、Alembic 升/降级、Docker 构建验证、安全扫描（依赖漏洞 + 静态检查） |
+| `[ci.yml](./.github/workflows/ci.yml)`           | push / PR → `main` | Ruff lint + format、mypy、pytest + 覆盖率（PG + Redis services）、Alembic 升/降级、Docker 构建验证、安全扫描（依赖漏洞、静态检查、Trivy 镜像漏洞扫描） |
+| `[codeql.yml](./.github/workflows/codeql.yml)`   | push / PR → `main` + weekly | CodeQL Python 语义安全扫描（`security-extended` + `security-and-quality`） |
 | `[release.yml](./.github/workflows/release.yml)` | `v*.*.*` tag 或手动   | 基于 commit 历史自动生成 Changelog 并创建 GitHub Release                                                        |
 
 
@@ -435,7 +436,6 @@ docker build .    # 验证镜像构建
 
 - Docker 镜像自动发布（GHCR）
 - SBOM 与构建 attestation
-- 更重型安全扫描（CodeQL、Trivy）
 
 ## 贡献
 
