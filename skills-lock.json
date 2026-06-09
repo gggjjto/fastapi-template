@@ -1,17 +1,47 @@
 {
   "version": 1,
   "skills": {
+    "agent-builder": {
+      "source": "shareai-lab/learn-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/agent-builder/SKILL.md",
+      "computedHash": "54dae8ada5ef222c05a606868b013411ccfa613b136bd16453ced5352db0198d"
+    },
+    "agent-orchestration": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "skillPath": "plugins/ork/skills/agent-orchestration/SKILL.md",
+      "computedHash": "2645f0b4dec2a93ab74568eb875c511a077e8cb2a312fc382ec7f7c8e5004113"
+    },
     "architecture-decision-records": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/documentation-generation/skills/architecture-decision-records/SKILL.md",
       "computedHash": "bffeafc71791924809ca9e24bfe3f18e87b2a060dbe5484468b4ff06c8e693b2"
     },
+    "backup-disaster-recovery": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/backup-disaster-recovery/SKILL.md",
+      "computedHash": "e97ccb45fe023110938402e78d48b44dab8ae68c91421710594f1174da4db197"
+    },
     "code-review-excellence": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/developer-essentials/skills/code-review-excellence/SKILL.md",
       "computedHash": "0f585a4ad2f6d8353069ca9051c6f0e8865abb9d3a6a268d423784c3c3852962"
+    },
+    "deployment-pipeline": {
+      "source": "hieutrtr/ai1-skills",
+      "sourceType": "github",
+      "skillPath": "skills/deployment-pipeline/SKILL.md",
+      "computedHash": "5d56432b99486986b19e03f7a49602270045c60b85c8630a6f39fb6726567ebd"
+    },
+    "devops-deployment": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "skillPath": "plugins/ork/skills/devops-deployment/SKILL.md",
+      "computedHash": "e2e2309855710269c8f9f1069f8b67351dd7f2186426ad48f9cd1beeb4fb56e1"
     },
     "documentation-and-adrs": {
       "source": "addyosmani/agent-skills",
@@ -24,6 +54,24 @@
       "sourceType": "github",
       "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md",
       "computedHash": "ee23d5285caf055cf164ff45dd34888d381143564666baacab8aa786f22e413a"
+    },
+    "incident-response": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/incident-response/SKILL.md",
+      "computedHash": "7bca2a38e630dae90f022997b6a50754f6e9d83ca85f9134f677cfcde9c703a6"
+    },
+    "observability-engineer": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/observability-engineer/SKILL.md",
+      "computedHash": "5fd8f9591f0dea4c1e393e83d7dfcabf07147556423396e61f65bc7987b54c1f"
+    },
+    "vulnerability-scanning": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/vulnerability-scanning/SKILL.md",
+      "computedHash": "e068959bad2463f66328168aa941aac0dc219b232edec4e5dee96cf47c21b0ea"
     }
   }
 }

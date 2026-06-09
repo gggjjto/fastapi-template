@@ -170,6 +170,14 @@ Development workflows are available as skills in `.agents/skills/`:
 - `/write-tests` — write or improve integration tests for existing code: gap analysis → tests → run.
 - `/write-pr` — generate a filled PR description from the current branch diff and commit history.
 - `/upgrade-deps` — safely upgrade a dependency: changelog analysis → version bump → test validation.
+- `/devops-deployment` — guide CI/CD, Docker, Kubernetes, Terraform, and release strategy work.
+- `/deployment-pipeline` — plan staging/production deployment gates, health checks, canary rollout, and rollback procedures.
+- `/observability-engineer` — design monitoring, logging, tracing, SLI/SLOs, alerts, and incident-response workflows.
+- `/incident-response` — triage production incidents, draft status updates, track mitigation, and write blameless postmortems.
+- `/backup-disaster-recovery` — plan backup, restore, RTO/RPO, disaster recovery, and failover procedures.
+- `/vulnerability-scanning` — add dependency, container, code, and infrastructure vulnerability scanning workflows.
+- `/agent-builder` — design and implement AI agents, capabilities, context handling, tools, and subagent patterns.
+- `/agent-orchestration` — design agent loops, multi-agent coordination, supervisor routing, framework selection, and result synthesis.
 
 Documentation maintenance rules live in `.agents/rules/docs-maintenance.md`. Apply them before finishing any change that affects setup, APIs, configuration, tests, CI/CD, security posture, or AI workflow.
 
@@ -181,6 +189,8 @@ Use `npx skills` to manage community skills. Install project skills with
 
 ```bash
 npx skills find fastapi
+npx skills find observability monitoring sre incident runbook
+npx skills find agent development agent builder agent framework
 npx skills add fastapi/fastapi --list
 npx skills use fastapi/fastapi@fastapi --skill fastapi
 npx skills add fastapi/fastapi --skill fastapi --agent codex --copy -y
