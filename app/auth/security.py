@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import bcrypt
@@ -20,31 +22,39 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(user_id: UUID) -> str:
-    return _encode(user_id, "access", timedelta(minutes=settings.access_token_expire_minutes))
+    return _encode(
+        {"sub": str(user_id), "type": "access"},
+        timedelta(minutes=settings.access_token_expire_minutes),
+    )
 
 
-def create_refresh_token(user_id: UUID) -> str:
-    return _encode(user_id, "refresh", timedelta(days=settings.refresh_token_expire_days))
+def create_refresh_token(user_id: UUID, session_id: UUID, jti: str) -> str:
+    """颁发 refresh token：绑定服务端会话 id 与一次性 jti，用于轮换与复用检测。"""
+    return _encode(
+        {"sub": str(user_id), "type": "refresh", "session_id": str(session_id), "jti": jti},
+        timedelta(days=settings.refresh_token_expire_days),
+    )
 
 
-def decode_access_token(token: str) -> dict:
+def hash_refresh_token(token: str) -> str:
+    """对 refresh token 取 sha256，仅存哈希，绝不持久化原始 token。"""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
     payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     if payload.get("type") != "access":
         raise jwt.InvalidTokenError("Not an access token")
     return payload
 
 
-def decode_refresh_token(token: str) -> dict:
+def decode_refresh_token(token: str) -> dict[str, Any]:
     payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     if payload.get("type") != "refresh":
         raise jwt.InvalidTokenError("Not a refresh token")
     return payload
 
 
-def _encode(user_id: UUID, token_type: str, expire_delta: timedelta) -> str:
-    payload = {
-        "sub": str(user_id),
-        "type": token_type,
-        "exp": datetime.now(UTC) + expire_delta,
-    }
+def _encode(claims: dict[str, Any], expire_delta: timedelta) -> str:
+    payload = {**claims, "exp": datetime.now(UTC) + expire_delta}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

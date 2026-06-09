@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import app.auth.models
 import app.users.models  # noqa: F401 — registers models with Base.metadata
 from app.core.config import get_settings
 from app.db.base import Base

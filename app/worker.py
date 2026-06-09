@@ -6,6 +6,7 @@ Arq 后台任务 Worker。
 
 生产环境中作为独立进程（或独立容器）与 API 服务并行运行。
 每个任务函数的第一个参数 ctx 由 Arq 注入，包含 redis、job_id 等信息。
+周期性任务通过 WorkerSettings.cron_jobs 注册；实际执行时间取决于 Worker 进程时区。
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 import structlog
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.core.config import get_settings
@@ -32,11 +34,29 @@ async def example_task(ctx: dict, message: str) -> str:
     return f"已处理：{message}"
 
 
+async def scheduled_maintenance_task(ctx: dict) -> str:
+    """周期任务示例，用于放置每日清理、同步、统计预聚合等逻辑。"""
+    logger.info("worker.scheduled_maintenance_task", job_id=ctx["job_id"])
+    return "scheduled maintenance completed"
+
+
 # ── Worker 配置 ───────────────────────────────────────────────────────────────
 
 
 class WorkerSettings:
-    functions: ClassVar = [example_task]
+    functions: ClassVar = [example_task, scheduled_maintenance_task]
+    cron_jobs: ClassVar = [
+        cron(
+            scheduled_maintenance_task,
+            name="scheduled_maintenance_daily",
+            hour=3,
+            minute=0,
+            second=0,
+            unique=True,
+            timeout=300,
+            max_tries=3,
+        )
+    ]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)  # type: ignore[arg-type]
     max_jobs = 10
     job_timeout = 300  # 单个任务超时时间（秒），超时后标记为失败

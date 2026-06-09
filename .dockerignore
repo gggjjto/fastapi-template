@@ -35,15 +35,16 @@ htmlcov
 .vscode
 .idea
 .cursor
-.claude
 *.swp
 *.swo
 .DS_Store
 
 # 文档与 CI（保留 README.md，pyproject.toml 构建需要它）
 .github
+.agents
 docs
-CLAUDE.md
+AGENTS.md
+skills-lock.json
 skills
 
 # 测试

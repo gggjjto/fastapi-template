@@ -1,45 +1,58 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
+from app.auth.dependencies import RequirePermission
+from app.core.openapi import error_responses
 from app.core.pagination import Page, Pagination
 from app.core.response import ApiResponse
 from app.db.session import DBSession
+from app.users.constants import Permission
 from app.users.dependencies import valid_user_id
-from app.users.exceptions import UserEmailConflict
 from app.users.models import User
-from app.users.repository import UserRepository
 from app.users.schemas import UserCreate, UserRead
 from app.users.service import UserService
 
 router = APIRouter()
 
 
-@router.post("", response_model=ApiResponse[UserRead], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ApiResponse[UserRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="创建用户",
+    description=(
+        "创建新用户。\n\n"
+        "- 邮箱全局唯一，重复注册返回 409\n"
+        "- 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆"
+    ),
+    responses=error_responses(status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_CONTENT),
+)
 async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[UserRead]:
-    """
-    创建新用户。
-
-    - 邮箱全局唯一，重复注册返回 409
-    - 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆
-    """
-    try:
-        user = await UserService(UserRepository(session)).create_user(payload)
-    except UserEmailConflict as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    user = await UserService(session).create_user(payload)
     return ApiResponse.ok(UserRead.model_validate(user))
 
 
-@router.get("", response_model=ApiResponse[Page[UserRead]])
+@router.get(
+    "",
+    response_model=ApiResponse[Page[UserRead]],
+    dependencies=[Depends(RequirePermission(Permission.READ))],
+    summary="用户列表",
+    description=(
+        "分页查询用户列表（需要 `users:read` 权限）。\n\n"
+        "- `limit`：每页数量，范围 1~100，默认 20\n"
+        "- `offset`：跳过条数，默认 0\n"
+        "- 返回体包含 `total`（总数）、`items`（当页数据）、`limit`、`offset`\n"
+        "- 未认证返回 401，已认证但无权限返回 403"
+    ),
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
+)
 async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[Page[UserRead]]:
-    """
-    分页查询用户列表。
-
-    - limit：每页数量，范围 1~100，默认 20
-    - offset：跳过条数，默认 0
-    - 返回体包含 total（总数）、items（当页数据）、limit、offset
-    """
-    users, total = await UserService(UserRepository(session)).list_users(
+    users, total = await UserService(session).list_users(
         limit=pagination.limit, offset=pagination.offset
     )
     return ApiResponse.ok(
@@ -52,12 +65,22 @@ async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[
     )
 
 
-@router.get("/{user_id}", response_model=ApiResponse[UserRead])
+@router.get(
+    "/{user_id}",
+    response_model=ApiResponse[UserRead],
+    dependencies=[Depends(RequirePermission(Permission.READ))],
+    summary="查询用户",
+    description=(
+        "根据 ID 查询单个用户（需要 `users:read` 权限）。\n\n"
+        "- `user_id` 必须是合法的 UUID 格式\n"
+        "- 未认证返回 401，已认证但无权限返回 403，用户不存在返回 404"
+    ),
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
+)
 async def get_user(user: User = Depends(valid_user_id)) -> ApiResponse[UserRead]:
-    """
-    根据 ID 查询单个用户。
-
-    - user_id 必须是合法的 UUID 格式
-    - 用户不存在时返回 404
-    """
     return ApiResponse.ok(UserRead.model_validate(user))
