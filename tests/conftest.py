@@ -37,6 +37,7 @@ os.environ.setdefault(
 )
 
 from app.core.config import get_settings
+from app.core.limiter import limiter
 from app.db.session import reset_db
 from app.main import app
 
@@ -52,6 +53,7 @@ async def _reset_state() -> AsyncGenerator[None, None]:
 
     不依赖 app lifespan，可单独运行。
     """
+    limiter._storage.reset()
     await reset_db()
 
     if _settings.redis_url:
@@ -64,6 +66,24 @@ async def _reset_state() -> AsyncGenerator[None, None]:
     yield
 
 
+class _FreshRequestState:
+    """为每个 HTTP 请求复制一份独立的 scope["state"]。
+
+    asgi-lifespan 的 LifespanManager 会把同一个 state dict 注入到每个请求的 scope，
+    导致 request.state 在请求间共享（真实服务器如 uvicorn 会按请求浅拷贝，不会共享）。
+    这会让依赖 request.state 的中间件/装饰器（如 slowapi 的限流标记）只在首个请求生效。
+    这里在最内层按请求浅拷贝 state，使测试环境与生产服务器行为一致。
+    """
+
+    def __init__(self, app: object) -> None:
+        self.app = app
+
+    async def __call__(self, scope: dict, receive: object, send: object) -> None:
+        if scope["type"] == "http":
+            scope = {**scope, "state": dict(scope.get("state") or {})}
+        await self.app(scope, receive, send)  # type: ignore[operator]
+
+
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """
@@ -72,7 +92,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     进入时触发 app 的 startup（init_redis / init_arq），
     退出时触发 shutdown（close_redis / close_arq / close_db）。
     """
-    async with LifespanManager(app) as manager:
+    async with LifespanManager(_FreshRequestState(app)) as manager:
         async with AsyncClient(
             transport=ASGITransport(app=manager.app),
             base_url="http://test",

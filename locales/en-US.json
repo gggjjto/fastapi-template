@@ -1,0 +1,6 @@
+{
+  "errors.user.not_found": "User not found",
+  "errors.user.email_conflict": "Email already exists",
+  "errors.auth.invalid_credentials": "Invalid email or password",
+  "errors.auth.invalid_token": "Invalid or expired token"
+}

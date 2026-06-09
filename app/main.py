@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
@@ -23,11 +25,18 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("app.startup", env=settings.env)
 
     if settings.db_create_tables_on_startup:
         await init_db()
+
+    # 幂等播种 RBAC 权限目录与默认角色（生产经迁移建表后，启动时填充参考数据）
+    from app.auth.seed import ensure_default_rbac
+    from app.db.session import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db_session:
+        await ensure_default_rbac(db_session)
 
     if settings.redis_url:
         from app.core.arq import init_arq
@@ -67,7 +76,7 @@ def create_app() -> FastAPI:
 
     # 注册全局错误处理器
     register_error_handlers(app)
-    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)  # type: ignore[arg-type]
 
     # 将限流器挂载到 app state，slowapi 从此处读取
     app.state.limiter = limiter
@@ -82,6 +91,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(RequestIDMiddleware)
+    # GZipMiddleware 最外层：在所有中间件处理完成后压缩响应体再发送给客户端
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:
