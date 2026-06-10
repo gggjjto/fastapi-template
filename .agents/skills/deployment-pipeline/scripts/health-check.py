@@ -7,15 +7,15 @@ and writes structured results to a JSON file.
 
 Usage:
     python health-check.py --url https://staging.example.com --output-dir ./results/
-    python health-check.py --url https://api.example.com --retries 5 --timeout 30 --output-dir ./results/
+    python health-check.py --url https://api.example.com --retries 5 \
+      --timeout 30 --output-dir ./results/
 """
 
 import argparse
 import json
-import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -63,7 +63,7 @@ def parse_args() -> argparse.Namespace:
 
 def log(message: str, verbose: bool = True) -> None:
     if verbose:
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         print(f"[{timestamp}] {message}")
 
 
@@ -172,7 +172,7 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     result_file = output_dir / f"health-check-{timestamp}.json"
     log_file = output_dir / f"health-check-{timestamp}.log"
 

@@ -11,10 +11,11 @@ Usage:
     3. Type commands, 'q' to quit
 """
 
-from anthropic import Anthropic
-from pathlib import Path
-import subprocess
 import os
+import subprocess
+from pathlib import Path
+
+from anthropic import Anthropic
 
 # Configuration
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -37,8 +38,8 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {"command": {"type": "string"}},
-            "required": ["command"]
-        }
+            "required": ["command"],
+        },
     },
     {
         "name": "read_file",
@@ -46,20 +47,17 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {"path": {"type": "string"}},
-            "required": ["path"]
-        }
+            "required": ["path"],
+        },
     },
     {
         "name": "write_file",
         "description": "Write content to file",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "content": {"type": "string"}
-            },
-            "required": ["path", "content"]
-        }
+            "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+            "required": ["path", "content"],
+        },
     },
 ]
 
@@ -69,8 +67,7 @@ def execute_tool(name: str, args: dict) -> str:
     if name == "bash":
         try:
             r = subprocess.run(
-                args["command"], shell=True, cwd=WORKDIR,
-                capture_output=True, text=True, timeout=60
+                args["command"], shell=True, cwd=WORKDIR, capture_output=True, text=True, timeout=60
             )
             return (r.stdout + r.stderr).strip() or "(empty)"
         except subprocess.TimeoutExpired:
@@ -94,7 +91,7 @@ def execute_tool(name: str, args: dict) -> str:
     return f"Unknown tool: {name}"
 
 
-def agent(prompt: str, history: list = None) -> str:
+def agent(prompt: str, history: list[dict[str, str]] | None = None) -> str:
     """Run the agent loop."""
     if history is None:
         history = []
@@ -124,11 +121,7 @@ def agent(prompt: str, history: list = None) -> str:
                 print(f"> {block.name}: {block.input}")
                 output = execute_tool(block.name, block.input)
                 print(f"  {output[:100]}...")
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output
-                })
+                results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
 
         history.append({"role": "user", "content": results})
 

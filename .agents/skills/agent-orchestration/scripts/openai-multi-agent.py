@@ -11,15 +11,14 @@ Features:
 """
 
 import json
-import os
-from typing import Any
+from typing import Any, ClassVar
 
 import structlog
 from agents import Agent, Runner, handoff, tool, trace
-from agents.exceptions import InputGuardrailException, OutputGuardrailException
+from agents.exceptions import InputGuardrailException
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from agents.guardrails import InputGuardrail, OutputGuardrail
-from langfuse import observe, get_client
+from langfuse import get_client, observe
 
 logger = structlog.get_logger()
 
@@ -27,6 +26,7 @@ logger = structlog.get_logger()
 # ============================================================================
 # TOOLS
 # ============================================================================
+
 
 @tool
 def search_knowledge_base(query: str, limit: int = 5) -> str:
@@ -39,19 +39,13 @@ def search_knowledge_base(query: str, limit: int = 5) -> str:
     logger.info("Searching knowledge base", query=query, limit=limit)
     # Replace with actual search implementation
     results = [
-        {"title": f"Result {i}", "content": f"Content for: {query}"}
-        for i in range(min(limit, 3))
+        {"title": f"Result {i}", "content": f"Content for: {query}"} for i in range(min(limit, 3))
     ]
     return json.dumps(results)
 
 
 @tool
-def create_support_ticket(
-    title: str,
-    description: str,
-    priority: str,
-    category: str
-) -> str:
+def create_support_ticket(title: str, description: str, priority: str, category: str) -> str:
     """Create a support ticket in the system.
 
     Args:
@@ -63,11 +57,13 @@ def create_support_ticket(
     logger.info("Creating support ticket", title=title, priority=priority)
     # Replace with actual ticket creation
     ticket_id = f"TKT-{hash(title) % 10000:04d}"
-    return json.dumps({
-        "ticket_id": ticket_id,
-        "status": "created",
-        "message": f"Ticket {ticket_id} created successfully"
-    })
+    return json.dumps(
+        {
+            "ticket_id": ticket_id,
+            "status": "created",
+            "message": f"Ticket {ticket_id} created successfully",
+        }
+    )
 
 
 @tool
@@ -79,12 +75,14 @@ def check_account_status(account_id: str) -> str:
     """
     logger.info("Checking account status", account_id=account_id)
     # Replace with actual account lookup
-    return json.dumps({
-        "account_id": account_id,
-        "status": "active",
-        "plan": "professional",
-        "billing_status": "current"
-    })
+    return json.dumps(
+        {
+            "account_id": account_id,
+            "status": "active",
+            "plan": "professional",
+            "billing_status": "current",
+        }
+    )
 
 
 @tool
@@ -98,22 +96,30 @@ def process_refund(account_id: str, amount: float, reason: str) -> str:
     """
     logger.info("Processing refund", account_id=account_id, amount=amount)
     # Replace with actual refund processing
-    return json.dumps({
-        "refund_id": f"REF-{hash(account_id) % 10000:04d}",
-        "status": "processed",
-        "amount": amount,
-        "message": "Refund will be credited within 5-7 business days"
-    })
+    return json.dumps(
+        {
+            "refund_id": f"REF-{hash(account_id) % 10000:04d}",
+            "status": "processed",
+            "amount": amount,
+            "message": "Refund will be credited within 5-7 business days",
+        }
+    )
 
 
 # ============================================================================
 # GUARDRAILS
 # ============================================================================
 
+
 class PIIDetectionGuardrail(InputGuardrail):
     """Detect and block PII in input."""
 
-    PII_PATTERNS = ["ssn", "social security", "credit card", "password"]
+    PII_PATTERNS: ClassVar[list[str]] = [
+        "ssn",
+        "social security",
+        "credit card",
+        "password",
+    ]
 
     async def check(self, input_text: str) -> str:
         """Check input for PII."""
@@ -122,7 +128,7 @@ class PIIDetectionGuardrail(InputGuardrail):
             if pattern in input_lower:
                 logger.warning("PII detected in input", pattern=pattern)
                 raise InputGuardrailException(
-                    f"Potential PII detected. Please remove sensitive information."
+                    "Potential PII detected. Please remove sensitive information."
                 )
         return input_text
 
@@ -130,7 +136,7 @@ class PIIDetectionGuardrail(InputGuardrail):
 class ContentSafetyGuardrail(OutputGuardrail):
     """Ensure output doesn't contain harmful content."""
 
-    BLOCKED_PHRASES = ["hack", "exploit", "bypass security"]
+    BLOCKED_PHRASES: ClassVar[list[str]] = ["hack", "exploit", "bypass security"]
 
     async def check(self, output_text: str) -> str:
         """Check output for harmful content."""
@@ -164,7 +170,7 @@ hand back to the triage agent with a summary.
 
 Always be patient and clear in your explanations.""",
     model="gpt-5.5",
-    tools=[search_knowledge_base, create_support_ticket]
+    tools=[search_knowledge_base, create_support_ticket],
 )
 
 # Billing Support Agent
@@ -185,7 +191,7 @@ hand back to the triage agent with a summary.
 
 Be empathetic and transparent about billing matters.""",
     model="gpt-5.5",
-    tools=[check_account_status, process_refund]
+    tools=[check_account_status, process_refund],
 )
 
 # Account Management Agent
@@ -206,7 +212,7 @@ triage agent with a summary.
 
 Be helpful and proactive in suggesting improvements.""",
     model="gpt-5.5",
-    tools=[check_account_status]
+    tools=[check_account_status],
 )
 
 
@@ -237,16 +243,17 @@ Always be friendly, professional, and efficient.""",
     handoffs=[
         handoff(agent=technical_agent),
         handoff(agent=billing_agent),
-        handoff(agent=account_agent)
+        handoff(agent=account_agent),
     ],
     input_guardrails=[PIIDetectionGuardrail()],
-    output_guardrails=[ContentSafetyGuardrail()]
+    output_guardrails=[ContentSafetyGuardrail()],
 )
 
 
 # ============================================================================
 # WORKFLOW EXECUTION
 # ============================================================================
+
 
 @observe()
 async def run_support_workflow(user_message: str, session_id: str) -> dict[str, Any]:
@@ -262,7 +269,7 @@ async def run_support_workflow(user_message: str, session_id: str) -> dict[str, 
     get_client().update_current_trace(
         name="openai_agents_support",
         session_id=session_id,
-        metadata={"initial_message": user_message[:100]}
+        metadata={"initial_message": user_message[:100]},
     )
 
     logger.info("Starting support workflow", session_id=session_id)
@@ -273,53 +280,44 @@ async def run_support_workflow(user_message: str, session_id: str) -> dict[str, 
         with trace.span("support_workflow"):
             result = await runner.run(orchestrator, user_message)
 
+            handoffs = result.handoff_count if hasattr(result, "handoff_count") else 0
             get_client().update_current_observation(
                 output={"status": "success", "trace_id": result.trace_id},
-                metadata={"handoffs": result.handoff_count if hasattr(result, 'handoff_count') else 0}
+                metadata={"handoffs": handoffs},
             )
 
             logger.info(
-                "Support workflow completed",
-                session_id=session_id,
-                trace_id=result.trace_id
+                "Support workflow completed", session_id=session_id, trace_id=result.trace_id
             )
 
             return {
                 "status": "success",
                 "response": result.final_output,
                 "trace_id": result.trace_id,
-                "session_id": session_id
+                "session_id": session_id,
             }
 
     except InputGuardrailException as e:
         logger.warning("Input guardrail triggered", error=str(e))
-        return {
-            "status": "guardrail_blocked",
-            "response": str(e),
-            "session_id": session_id
-        }
+        return {"status": "guardrail_blocked", "response": str(e), "session_id": session_id}
 
     except Exception as e:
         logger.error("Support workflow failed", error=str(e))
 
         get_client().update_current_observation(
-            output={"status": "error", "error": str(e)},
-            level="error"
+            output={"status": "error", "error": str(e)}, level="error"
         )
 
         return {
             "status": "error",
             "response": "I apologize, but I encountered an error. Please try again.",
             "error": str(e),
-            "session_id": session_id
+            "session_id": session_id,
         }
 
 
 @observe()
-async def run_support_workflow_streaming(
-    user_message: str,
-    session_id: str
-) -> dict[str, Any]:
+async def run_support_workflow_streaming(user_message: str, session_id: str) -> dict[str, Any]:
     """Run the workflow with streaming responses.
 
     Args:
@@ -338,28 +336,19 @@ async def run_support_workflow_streaming(
         async for chunk in runner.stream(orchestrator, user_message):
             if chunk.content:
                 full_response += chunk.content
-                yield {
-                    "type": "chunk",
-                    "content": chunk.content
-                }
+                yield {"type": "chunk", "content": chunk.content}
 
-        yield {
-            "type": "complete",
-            "full_response": full_response,
-            "session_id": session_id
-        }
+        yield {"type": "complete", "full_response": full_response, "session_id": session_id}
 
     except Exception as e:
         logger.error("Streaming workflow failed", error=str(e))
-        yield {
-            "type": "error",
-            "error": str(e)
-        }
+        yield {"type": "error", "error": str(e)}
 
 
 # ============================================================================
 # CONVERSATION MANAGEMENT
 # ============================================================================
+
 
 class ConversationManager:
     """Manage multi-turn conversations with the support system."""
@@ -368,11 +357,7 @@ class ConversationManager:
         self.conversations: dict[str, list] = {}
         self.runner = Runner(trace=True)
 
-    async def send_message(
-        self,
-        session_id: str,
-        message: str
-    ) -> dict[str, Any]:
+    async def send_message(self, session_id: str, message: str) -> dict[str, Any]:
         """Send a message in an existing or new conversation.
 
         Args:
@@ -387,38 +372,27 @@ class ConversationManager:
             self.conversations[session_id] = []
 
         # Add user message
-        self.conversations[session_id].append({
-            "role": "user",
-            "content": message
-        })
+        self.conversations[session_id].append({"role": "user", "content": message})
 
         # Run with conversation history
         try:
-            result = await self.runner.run(
-                orchestrator,
-                self.conversations[session_id]
-            )
+            result = await self.runner.run(orchestrator, self.conversations[session_id])
 
             # Add agent response
-            self.conversations[session_id].append({
-                "role": "assistant",
-                "content": result.final_output
-            })
+            self.conversations[session_id].append(
+                {"role": "assistant", "content": result.final_output}
+            )
 
             return {
                 "status": "success",
                 "response": result.final_output,
                 "session_id": session_id,
-                "message_count": len(self.conversations[session_id])
+                "message_count": len(self.conversations[session_id]),
             }
 
         except Exception as e:
             logger.error("Conversation error", session_id=session_id, error=str(e))
-            return {
-                "status": "error",
-                "error": str(e),
-                "session_id": session_id
-            }
+            return {"status": "error", "error": str(e), "session_id": session_id}
 
     def clear_conversation(self, session_id: str) -> None:
         """Clear conversation history for a session."""
@@ -431,14 +405,14 @@ class ConversationManager:
 # USAGE EXAMPLE
 # ============================================================================
 
+
 async def main():
     """Example usage of the multi-agent support system."""
-    import asyncio
 
     # Single message
     result = await run_support_workflow(
         user_message="I'm having trouble logging into my account. Can you help?",
-        session_id="session-001"
+        session_id="session-001",
     )
     print(f"Response: {result['response']}")
 
@@ -447,19 +421,18 @@ async def main():
 
     # First message
     response1 = await manager.send_message(
-        "session-002",
-        "I have a billing question about my last invoice"
+        "session-002", "I have a billing question about my last invoice"
     )
     print(f"Agent: {response1['response']}")
 
     # Follow-up
     response2 = await manager.send_message(
-        "session-002",
-        "The charge for $99 seems wrong, I'm on the $49 plan"
+        "session-002", "The charge for $99 seems wrong, I'm on the $49 plan"
     )
     print(f"Agent: {response2['response']}")
 
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

@@ -323,7 +323,7 @@ async def run_research_crew_async(topic: str) -> dict[str, Any]:
     logger.info("Starting async research crew", topic=topic)
 
     try:
-        crew, tasks = create_research_crew(topic)
+        crew, _tasks = create_research_crew(topic)
 
         # Async execution
         result = await crew.kickoff_async()

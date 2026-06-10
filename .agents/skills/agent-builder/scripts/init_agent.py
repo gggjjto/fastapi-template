@@ -48,13 +48,19 @@ SYSTEM = """You are a coding agent. Use bash for everything:
 TOOL = [{{
     "name": "bash",
     "description": "Execute shell command",
-    "input_schema": {{"type": "object", "properties": {{"command": {{"type": "string"}}}}, "required": ["command"]}}
+    "input_schema": {
+        "type": "object",
+        "properties": {{"command": {{"type": "string"}}},
+        "required": ["command"],
+    },
 }}]
 
 def run(prompt, history=[]):
     history.append({{"role": "user", "content": prompt}})
     while True:
-        r = client.messages.create(model=MODEL, system=SYSTEM, messages=history, tools=TOOL, max_tokens=8000)
+        r = client.messages.create(
+            model=MODEL, system=SYSTEM, messages=history, tools=TOOL, max_tokens=8000
+        )
         history.append({{"role": "assistant", "content": r.content}})
         if r.stop_reason != "tool_use":
             return "".join(b.text for b in r.content if hasattr(b, "text"))
@@ -63,11 +69,23 @@ def run(prompt, history=[]):
             if b.type == "tool_use":
                 print(f"> {{b.input['command']}}")
                 try:
-                    out = subprocess.run(b.input["command"], shell=True, capture_output=True, text=True, timeout=60)
+                    out = subprocess.run(
+                        b.input["command"],
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
                     output = (out.stdout + out.stderr).strip() or "(empty)"
                 except Exception as e:
                     output = f"Error: {{e}}"
-                results.append({{"type": "tool_result", "tool_use_id": b.id, "content": output[:50000]}})
+                results.append(
+                    {{
+                        "type": "tool_result",
+                        "tool_use_id": b.id,
+                        "content": output[:50000],
+                    }}
+                )
         history.append({{"role": "user", "content": results}})
 
 if __name__ == "__main__":
@@ -76,7 +94,6 @@ if __name__ == "__main__":
     while (q := input(">> ").strip()) not in ("q", "quit", ""):
         print(run(q, h), "\\n")
 ''',
-
     1: '''#!/usr/bin/env python3
 """
 Level 1 Agent - Model as Agent (~200 lines)
@@ -109,14 +126,49 @@ Rules:
 - After finishing, summarize what changed."""
 
 TOOLS = [
-    {{"name": "bash", "description": "Run shell command",
-     "input_schema": {{"type": "object", "properties": {{"command": {{"type": "string"}}}}, "required": ["command"]}}}},
-    {{"name": "read_file", "description": "Read file contents",
-     "input_schema": {{"type": "object", "properties": {{"path": {{"type": "string"}}}}, "required": ["path"]}}}},
-    {{"name": "write_file", "description": "Write content to file",
-     "input_schema": {{"type": "object", "properties": {{"path": {{"type": "string"}}, "content": {{"type": "string"}}}}, "required": ["path", "content"]}}}},
-    {{"name": "edit_file", "description": "Replace exact text in file",
-     "input_schema": {{"type": "object", "properties": {{"path": {{"type": "string"}}, "old_text": {{"type": "string"}}, "new_text": {{"type": "string"}}}}, "required": ["path", "old_text", "new_text"]}}}},
+    {{
+        "name": "bash",
+        "description": "Run shell command",
+        "input_schema": {
+            "type": "object",
+            "properties": {{"command": {{"type": "string"}}},
+            "required": ["command"],
+        },
+    }},
+    {{
+        "name": "read_file",
+        "description": "Read file contents",
+        "input_schema": {
+            "type": "object",
+            "properties": {{"path": {{"type": "string"}}},
+            "required": ["path"],
+        },
+    }},
+    {{
+        "name": "write_file",
+        "description": "Write content to file",
+        "input_schema": {
+            "type": "object",
+            "properties": {{
+                "path": {{"type": "string"}},
+                "content": {{"type": "string"}},
+            }},
+            "required": ["path", "content"],
+        },
+    }},
+    {{
+        "name": "edit_file",
+        "description": "Replace exact text in file",
+        "input_schema": {
+            "type": "object",
+            "properties": {{
+                "path": {{"type": "string"}},
+                "old_text": {{"type": "string"}},
+                "new_text": {{"type": "string"}},
+            }},
+            "required": ["path", "old_text", "new_text"],
+        },
+    }},
 ]
 
 def safe_path(p: str) -> Path:
@@ -133,7 +185,14 @@ def execute(name: str, args: dict) -> str:
         if any(d in args["command"] for d in dangerous):
             return "Error: Dangerous command blocked"
         try:
-            r = subprocess.run(args["command"], shell=True, cwd=WORKDIR, capture_output=True, text=True, timeout=60)
+            r = subprocess.run(
+                args["command"],
+                shell=True,
+                cwd=WORKDIR,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
             return (r.stdout + r.stderr).strip()[:50000] or "(empty)"
         except subprocess.TimeoutExpired:
             return "Error: Timeout (60s)"
@@ -168,7 +227,7 @@ def execute(name: str, args: dict) -> str:
 
     return f"Unknown tool: {{name}}"
 
-def agent(prompt: str, history: list = None) -> str:
+def agent(prompt: str, history: list[dict[str, str]] | None = None) -> str:
     """Run the agent loop."""
     if history is None:
         history = []
@@ -189,7 +248,13 @@ def agent(prompt: str, history: list = None) -> str:
                 print(f"> {{block.name}}: {{str(block.input)[:100]}}")
                 output = execute(block.name, block.input)
                 print(f"  {{output[:100]}}...")
-                results.append({{"type": "tool_result", "tool_use_id": block.id, "content": output}})
+                results.append(
+                    {{
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": output,
+                    }}
+                )
         history.append({{"role": "user", "content": results}})
 
 if __name__ == "__main__":
@@ -207,11 +272,11 @@ if __name__ == "__main__":
 ''',
 }
 
-ENV_TEMPLATE = '''# API Configuration
+ENV_TEMPLATE = """# API Configuration
 ANTHROPIC_API_KEY=sk-xxx
 ANTHROPIC_BASE_URL=https://api.anthropic.com
 MODEL_NAME=claude-sonnet-4-20250514
-'''
+"""
 
 
 def create_agent(name: str, level: int, output_dir: Path):
@@ -244,11 +309,11 @@ def create_agent(name: str, level: int, output_dir: Path):
     print(f"Created: {gitignore}")
 
     print(f"\nAgent '{name}' created at {agent_dir}")
-    print(f"\nNext steps:")
+    print("\nNext steps:")
     print(f"  1. cd {agent_dir}")
-    print(f"  2. cp .env.example .env")
-    print(f"  3. Edit .env with your API key")
-    print(f"  4. pip install anthropic python-dotenv")
+    print("  2. cp .env.example .env")
+    print("  3. Edit .env with your API key")
+    print("  4. pip install anthropic python-dotenv")
     print(f"  5. python {name}.py")
 
 
@@ -263,13 +328,22 @@ Levels:
   2  Todo (~300 lines)   - + TodoWrite for structured planning
   3  Subagent (~450)     - + Task tool for context isolation
   4  Skills (~550)       - + Skill tool for domain expertise
-        """
+        """,
     )
     parser.add_argument("name", help="Name of the agent to create")
-    parser.add_argument("--level", type=int, default=1, choices=[0, 1, 2, 3, 4],
-                       help="Complexity level (default: 1)")
-    parser.add_argument("--path", type=Path, default=Path.cwd(),
-                       help="Output directory (default: current directory)")
+    parser.add_argument(
+        "--level",
+        type=int,
+        default=1,
+        choices=[0, 1, 2, 3, 4],
+        help="Complexity level (default: 1)",
+    )
+    parser.add_argument(
+        "--path",
+        type=Path,
+        default=Path.cwd(),
+        help="Output directory (default: current directory)",
+    )
 
     args = parser.parse_args()
     create_agent(args.name, args.level, args.path)
