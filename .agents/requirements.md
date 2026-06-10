@@ -29,7 +29,7 @@ Track **active** requirements only. Git history is the archive — do not keep s
 **Decisions:**
 - Community skills are discovered with `npx skills find`, inspected with `npx skills use`, and installed only after review.
 - Do not use `--agent "*"`, because it creates many tool-specific directories.
-- Installed community skills currently include `fastapi`, `documentation-and-adrs`, `architecture-decision-records`, and `code-review-excellence`.
+- Installed community skills currently include `fastapi`, `documentation-and-adrs`, `architecture-decision-records`, `code-review-excellence`, `devops-deployment`, `deployment-pipeline`, `observability-engineer`, `incident-response`, `backup-disaster-recovery`, `vulnerability-scanning`, `agent-builder`, and `agent-orchestration`.
 **Status:** Accepted and documented in `docs/adr/0001-use-agents-as-ai-workflow-source.md`.
 
 ### Engineering Foundation — 2026-06-02

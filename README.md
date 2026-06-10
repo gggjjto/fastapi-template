@@ -406,6 +406,7 @@ docker run --rm -p 8000:8000 \
 
 - `[.github/dependabot.yml](./.github/dependabot.yml)` — 每周自动升级 uv / GitHub Actions / Dockerfile 依赖
 - `[.dockerignore](./.dockerignore)` — 最小化镜像构建上下文
+- `[docs/release-chain.md](./docs/release-chain.md)` — 发布链路、镜像版本、部署与回滚方案
 
 ### 首次启用前的准备
 
@@ -434,7 +435,7 @@ docker build .    # 验证镜像构建
 
 以下能力默认不启用，保持模板轻量；当项目进入团队协作或生产化阶段再按需开启：
 
-- Docker 镜像自动发布（GHCR）
+- Docker 镜像自动发布（GHCR / 自建 registry）
 - SBOM 与构建 attestation
 
 ## 贡献

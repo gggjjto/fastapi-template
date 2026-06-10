@@ -56,6 +56,14 @@ The currently recorded community skills are tracked in `../skills-lock.json`:
 - `documentation-and-adrs` from `addyosmani/agent-skills`
 - `architecture-decision-records` from `wshobson/agents`
 - `code-review-excellence` from `wshobson/agents`
+- `devops-deployment` from `yonatangross/orchestkit`
+- `deployment-pipeline` from `hieutrtr/ai1-skills`
+- `observability-engineer` from `sickn33/antigravity-awesome-skills`
+- `incident-response` from `anthropics/knowledge-work-plugins`
+- `backup-disaster-recovery` from `aj-geddes/useful-ai-prompts`
+- `vulnerability-scanning` from `aj-geddes/useful-ai-prompts`
+- `agent-builder` from `shareai-lab/learn-claude-code`
+- `agent-orchestration` from `yonatangross/orchestkit`
 
 Review every community skill before using it. Skills run with the same filesystem
 and tool permissions as the active agent.
