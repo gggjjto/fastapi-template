@@ -26,7 +26,7 @@ router = APIRouter()
     ),
     responses=error_responses(
         status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
         status.HTTP_429_TOO_MANY_REQUESTS,
     ),
 )
@@ -56,7 +56,7 @@ async def login(
     ),
     responses=error_responses(
         status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
         status.HTTP_429_TOO_MANY_REQUESTS,
     ),
 )
@@ -79,7 +79,7 @@ async def refresh(
         "- 撤销后该 refresh_token 无法再刷新（已签发的 access_token 在到期前仍有效）\n"
         "- 即使会话不存在或已撤销也返回成功，避免信息泄露"
     ),
-    responses=error_responses(status.HTTP_422_UNPROCESSABLE_ENTITY),
+    responses=error_responses(status.HTTP_422_UNPROCESSABLE_CONTENT),
 )
 async def logout(payload: RefreshRequest, session: DBSession) -> ApiResponse[MessageResponse]:
     await AuthService(session).logout(payload.refresh_token)

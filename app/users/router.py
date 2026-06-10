@@ -26,7 +26,7 @@ router = APIRouter()
         "- 邮箱全局唯一，重复注册返回 409\n"
         "- 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆"
     ),
-    responses=error_responses(status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_ENTITY),
+    responses=error_responses(status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_CONTENT),
 )
 async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[UserRead]:
     user = await UserService(session).create_user(payload)
@@ -48,7 +48,7 @@ async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[Us
     responses=error_responses(
         status.HTTP_401_UNAUTHORIZED,
         status.HTTP_403_FORBIDDEN,
-        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
     ),
 )
 async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[Page[UserRead]]:
@@ -79,7 +79,7 @@ async def list_users(session: DBSession, pagination: Pagination) -> ApiResponse[
         status.HTTP_401_UNAUTHORIZED,
         status.HTTP_403_FORBIDDEN,
         status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
     ),
 )
 async def get_user(user: User = Depends(valid_user_id)) -> ApiResponse[UserRead]:
