@@ -27,14 +27,14 @@ uv run pytest tests/users/test_users.py::test_get_user_by_id -v
 make migrate                      # alembic upgrade head
 make revision m="describe change" # autogenerate migration (files named YYYY-MM-DD_slug.py)
 
-# Background worker (requires Redis)
+# Background worker / scheduled tasks (requires Redis)
 uv run arq app.worker.WorkerSettings
 
 # Test containers
 make test-up      # start PostgreSQL (5433) + Redis (6380) for tests
 make test-down    # stop and remove test containers
 
-# Full local stack (API + PostgreSQL + Redis)
+# Full local stack (API + worker + PostgreSQL + Redis)
 docker compose up
 ```
 
@@ -89,7 +89,7 @@ app/
 │   └── redis.py         # Redis connection lifecycle + RedisClient dependency alias
 ├── router.py            # Top-level APIRouter; composes all domain routers under /api/v1
 ├── main.py              # create_app() factory; lifespan; middleware stack
-└── worker.py            # Arq WorkerSettings + task definitions
+└── worker.py            # Arq WorkerSettings + queue and cron task definitions
 ```
 
 ### Key conventions
@@ -100,6 +100,7 @@ app/
 - **DB session**: Use `DBSession` type alias from `app.db.session`. Injected per-request via `get_db_session()`.
 - **Redis client**: Use `RedisClient` type alias from `app.db.redis`. Only available when `APP_REDIS_URL` is set.
 - **Task queue**: Use `ArqPool` type alias from `app.core.arq` to enqueue jobs. Enqueue: `await queue.enqueue_job("task_name", arg)`. New task functions must also be registered in `WorkerSettings.functions` in `app/worker.py`.
+- **Scheduled tasks**: Use Arq cron jobs in `WorkerSettings.cron_jobs`; register the same function in `WorkerSettings.functions`, keep the worker as a separate process/container, and document the intended timezone when adding real business schedules.
 - **Middleware order**: `add_middleware()` calls are LIFO — the last-added middleware wraps outermost (first to handle requests). Current order: GZip (outermost) → RequestID → CORS (innermost).
 
 ### Optional services
@@ -110,7 +111,7 @@ Both Redis and Sentry are opt-in via env vars. The app starts and runs normally 
 | Feature    | Enable via                   | What it unlocks                                                  |
 | ---------- | ---------------------------- | ---------------------------------------------------------------- |
 | Redis      | `APP_REDIS_URL=redis://...`  | `RedisClient`, `RedisCache`, `ArqPool`                           |
-| Task queue | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings` |
+| Task queue / scheduled jobs | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings`; cron jobs live in `WorkerSettings.cron_jobs` |
 | Sentry     | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported       |
 
 
