@@ -10,6 +10,9 @@ repository.
 - `rules/` contains reusable project rules referenced by skills and agents.
 - `requirements.md` tracks active requirements and decisions that AI agents must
   preserve while implementing changes.
+- `requirements/` stores domain requirement context and deeper decision notes.
+- `requirements/INDEX.md` lists the requirement topic files.
+- `rules/INDEX.md` lists all available rules and quick intent.
 
 Prefer `.agents` over tool-specific directories such as `.claude` or `.codex`.
 Tool-specific files may exist for compatibility, but they should point back to

@@ -149,8 +149,9 @@ tests/
 
 `.agents/` is the single source of truth for AI development rules in this
 repository. Use `.agents/skills/` for workflows and community skills,
-`.agents/rules/` for reusable project rules, and `.agents/requirements.md` for
-active requirements.
+`.agents/rules/` (and `.agents/rules/INDEX.md`) for reusable project rules,
+and `.agents/requirements.md` plus `.agents/requirements/` for active requirements
+and workflow notes.
 
 Development workflows are available as skills in `.agents/skills/`:
 

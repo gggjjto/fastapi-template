@@ -360,7 +360,9 @@ uv run pre-commit install
 
 - `.agents/skills/` — 项目工作流与社区 skills
 - `.agents/rules/` — 可复用项目规则
+- `.agents/rules/INDEX.md` — 规则快速索引
 - `.agents/requirements.md` — 当前活跃需求与决策记录
+- `.agents/requirements/INDEX.md` — 需求主题索引和跳转
 
 社区 skills 通过 `npx skills` 管理，安装时使用 `--agent codex --copy -y`
 以写入 `.agents/skills/` 并更新 `skills-lock.json`。完整命令见

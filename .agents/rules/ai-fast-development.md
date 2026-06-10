@@ -42,8 +42,8 @@ Follow AGENTS.md and existing users/auth patterns.
 - Prefer existing local helpers over new dependencies.
 - Do not add infrastructure unless the feature needs it now.
 - Follow `.agents/rules/docs-maintenance.md` for documentation updates.
+- Follow `.agents/rules/requirements-governance.md` for requirement updates when scope changes mid-design or mid-implementation.
 - **When adding code to an existing file, clean up inconsistencies in the surrounding code rather than layering new code on top of messy existing code.**
 - Follow karpathy-guidelines when writing code: state assumptions explicitly, touch only what is required, add no speculative features, and define a verifiable success criterion before starting.
 - **When requirements change, delete or replace the old logic — do not add fallback / compatibility shims to hedge between the old and new behavior. If the new requirement is correct, the old path is wrong; keeping it silently is a bug, not safety.**
 - **Maintain `.agents/requirements.md`**: when a requirement is proposed, clarified, or changed during a conversation, append an entry to that file (domain, decision, reason, status). For key decisions, also write a project-type memory file.
-

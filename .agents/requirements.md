@@ -8,6 +8,7 @@ Track **active** requirements only. Git history is the archive — do not keep s
 - **Remove** an entry when the requirement is fully implemented and merged, or abandoned.
 - **Split** into `.agents/requirements/<domain>.md` when any domain exceeds ~5 active entries; update this file to link to it.
 - **Compress** multiple evolving entries for the same requirement into one "current state" entry.
+- For detailed process notes per domain, see `.agents/requirements/INDEX.md` and referenced files.
 
 ## Format
 
@@ -51,3 +52,13 @@ Track **active** requirements only. Git history is the archive — do not keep s
 - Phase 6 — logging hardening: `app/core/request_context.py` (bind/read `request_id`/`user_id`/`tenant_id` via structlog contextvars), `redact_sensitive` processor masking password/token/authorization/cookie/secret recursively, `RequestIDMiddleware` emits one `http.request` access log (method/path/status_code/duration_ms/client_ip) per request, `get_current_user` binds `user_id`.
 
 **Status:** All 6 phases complete and green via `make ci` on branch `feat/engineering-foundation`.
+
+### Requirements Governance — 2026-06-10
+**Requirement:** Keep a scalable requirement governance process when requirements shift during development: update `.agents/requirements.md` immediately, remove outdated behavior instead of adding compatibility shims, and store detailed change governance under `.agents/requirements/` with a lightweight index.
+**Change from:** Replaces ad-hoc requirement notes and makes mid-implementation changes explicit and traceable.
+**Reason:** This project already sees requirement churn; a stable process reduces drift between PR discussion, code, and tests.
+**Decisions:**
+- Add `.agents/requirements/agent-workflow.md` as the operational workflow for requirement changes.
+- Add `.agents/rules/requirements-governance.md` as the execution rule for agents.
+- Add `.agents/rules/INDEX.md` and `.agents/requirements/INDEX.md` for discoverability.
+**Status:** Accepted and active.
