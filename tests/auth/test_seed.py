@@ -20,12 +20,16 @@ async def _role_permission_codes(role_name: str) -> set[str]:
             await session.execute(select(Role.id).where(Role.name == role_name))
         ).scalar_one()
         permission_codes = (
-            await session.execute(
-                select(Permission.code)
-                .join(RolePermission, RolePermission.permission_id == Permission.id)
-                .where(RolePermission.role_id == role_id)
+            (
+                await session.execute(
+                    select(Permission.code)
+                    .join(RolePermission, RolePermission.permission_id == Permission.id)
+                    .where(RolePermission.role_id == role_id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return set(permission_codes)
 
 
