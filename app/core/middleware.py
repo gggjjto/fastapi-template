@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 import uuid
 
@@ -9,6 +10,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.core.request_context import bind_request_id, clear_request_context
 
 REQUEST_ID_HEADER = "x-request-id"
+_REQUEST_ID_MAX_LENGTH = 128
+_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:/=-]+$")
 
 logger = structlog.get_logger(__name__)
 
@@ -65,5 +68,9 @@ class RequestIDMiddleware:
 def _extract_request_id(scope: Scope) -> str | None:
     for key, value in scope.get("headers", []):
         if key.lower() == REQUEST_ID_HEADER.encode():
-            return value.decode()
+            request_id = value.decode(errors="ignore")
+            if 0 < len(request_id) <= _REQUEST_ID_MAX_LENGTH and _REQUEST_ID_PATTERN.fullmatch(
+                request_id
+            ):
+                return request_id
     return None

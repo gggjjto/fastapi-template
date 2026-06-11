@@ -9,17 +9,41 @@ from structlog.types import EventDict, WrappedLogger
 
 # 永不写入日志的敏感字段（大小写不敏感匹配）
 _SENSITIVE_KEYS: frozenset[str] = frozenset(
-    {"password", "token", "access_token", "refresh_token", "authorization", "cookie", "secret"}
+    {
+        "password",
+        "token",
+        "access_token",
+        "refresh_token",
+        "authorization",
+        "cookie",
+        "set-cookie",
+        "secret",
+        "api_key",
+        "apikey",
+        "jwt",
+        "private_key",
+    }
 )
 _REDACTED = "***"
+
+
+def _redact_value(value: Any) -> Any:
+    if isinstance(value, MutableMapping):
+        _redact_in_place(value)
+        return value
+    if isinstance(value, list):
+        return [_redact_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_value(item) for item in value)
+    return value
 
 
 def _redact_in_place(data: MutableMapping[str, Any]) -> None:
     for key, value in data.items():
         if isinstance(key, str) and key.lower() in _SENSITIVE_KEYS:
             data[key] = _REDACTED
-        elif isinstance(value, MutableMapping):
-            _redact_in_place(value)
+        else:
+            data[key] = _redact_value(value)
 
 
 def redact_sensitive(_logger: WrappedLogger, _method: str, event_dict: EventDict) -> EventDict:

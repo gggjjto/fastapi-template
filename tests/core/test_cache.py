@@ -51,6 +51,17 @@ async def test_delete_pattern_removes_matching_keys(redis_client: Redis) -> None
     assert await other.get("1") == {"title": "x"}
 
 
+async def test_delete_pattern_deletes_in_batches(redis_client: Redis) -> None:
+    cache = RedisCache(redis_client, prefix="batch")
+    for i in range(5):
+        await cache.set(str(i), {"value": i})
+
+    await cache.delete_pattern("*", batch_size=2)
+
+    for i in range(5):
+        assert await cache.get(str(i)) is None
+
+
 async def test_delete_pattern_noop_when_no_match(redis_client: Redis) -> None:
     """保证 keys 结果为空时不会调用 delete(*[])（redis-py 会拒绝）。"""
     cache = RedisCache(redis_client, prefix="empty")

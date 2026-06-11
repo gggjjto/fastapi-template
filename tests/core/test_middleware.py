@@ -22,6 +22,22 @@ async def test_custom_request_id_echoed_back(client: AsyncClient) -> None:
     assert resp.headers["x-request-id"] == custom_id
 
 
+async def test_invalid_request_id_is_replaced(client: AsyncClient) -> None:
+    invalid_id = "bad value"
+    resp = await client.get("/api/v1/health/live", headers={"X-Request-ID": invalid_id})
+
+    assert resp.headers["x-request-id"] != invalid_id
+    uuid.UUID(resp.headers["x-request-id"], version=4)
+
+
+async def test_overlong_request_id_is_replaced(client: AsyncClient) -> None:
+    request_id = "x" * 129
+    resp = await client.get("/api/v1/health/live", headers={"X-Request-ID": request_id})
+
+    assert resp.headers["x-request-id"] != request_id
+    uuid.UUID(resp.headers["x-request-id"], version=4)
+
+
 async def test_each_request_gets_unique_id(client: AsyncClient) -> None:
     resp1 = await client.get("/api/v1/health/live")
     resp2 = await client.get("/api/v1/health/live")

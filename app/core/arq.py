@@ -17,6 +17,12 @@ async def init_arq() -> None:
     """在 app lifespan 启动时调用，初始化 Arq 任务队列连接池。"""
     global _pool
     _pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))  # type: ignore[arg-type]
+    try:
+        await _pool.ping()
+    except Exception:
+        await _pool.aclose()
+        _pool = None
+        raise
 
 
 async def close_arq() -> None:

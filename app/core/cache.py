@@ -50,9 +50,14 @@ class RedisCache:
     async def delete(self, key: str) -> None:
         await self._redis.delete(self._key(key))
 
-    async def delete_pattern(self, pattern: str) -> None:
-        """删除匹配 glob 模式的所有 key（key 数量大时谨慎使用）。"""
-        keys = await self._redis.keys(self._key(pattern))
+    async def delete_pattern(self, pattern: str, *, batch_size: int = 500) -> None:
+        """删除匹配 glob 模式的所有 key。"""
+        keys: list[str] = []
+        async for key in self._redis.scan_iter(match=self._key(pattern), count=batch_size):
+            keys.append(key)
+            if len(keys) >= batch_size:
+                await self._redis.delete(*keys)
+                keys.clear()
         if keys:
             await self._redis.delete(*keys)
 

@@ -16,6 +16,12 @@ async def init_redis() -> None:
     """在 app lifespan 启动时调用，初始化 Redis 连接池。"""
     global _redis
     _redis = Redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[arg-type]
+    try:
+        await _redis.ping()
+    except Exception:
+        await _redis.aclose()
+        _redis = None
+        raise
 
 
 async def close_redis() -> None:

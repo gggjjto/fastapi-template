@@ -22,6 +22,8 @@ async def test_redacts_sensitive_keys_recursively() -> None:
         "token": "abc",
         "authorization": "Bearer xyz",
         "nested": {"refresh_token": "r", "keep": "v"},
+        "headers": [{"set-cookie": "session=abc"}, {"x-request-id": "keep"}],
+        "tuple_values": ({"api_key": "key"}, {"keep": "tuple"}),
         "keep": "ok",
     }
 
@@ -32,6 +34,10 @@ async def test_redacts_sensitive_keys_recursively() -> None:
     assert out["authorization"] == "***"
     assert out["nested"]["refresh_token"] == "***"
     assert out["nested"]["keep"] == "v"  # 非敏感键保留
+    assert out["headers"][0]["set-cookie"] == "***"
+    assert out["headers"][1]["x-request-id"] == "keep"
+    assert out["tuple_values"][0]["api_key"] == "***"
+    assert out["tuple_values"][1]["keep"] == "tuple"
     assert out["keep"] == "ok"
     assert out["event"] == "http.request"
 
