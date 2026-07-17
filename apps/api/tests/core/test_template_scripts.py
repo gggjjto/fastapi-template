@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -101,6 +103,28 @@ def test_template_copy_uses_selected_manifest(tmp_path: Path) -> None:
 
     for generated_path in manifest.generated_paths:
         assert (target / generated_path).exists(), generated_path
+
+
+def test_generated_fastapi_template_static_checks(tmp_path: Path) -> None:
+    create_project = _load_script("create_project")
+
+    names = create_project.build_project_names("Generated API")
+    target = tmp_path / "generated-api"
+
+    create_project.copy_template(target, names)
+
+    env = {**os.environ, "UV_NO_PROGRESS": "1"}
+    for command in ("api-lint", "api-format-check", "api-typecheck"):
+        result = subprocess.run(
+            ["make", command],
+            cwd=target,
+            env=env,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_doctor_render_results() -> None:
