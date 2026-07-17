@@ -1,0 +1,27 @@
+{
+  "id": "fastapi-api",
+  "name": "FastAPI API",
+  "description": "Production-minded FastAPI backend with auth, RBAC, PostgreSQL, Redis, Arq, Docker, and CI-ready quality gates.",
+  "source": "../../apps/api",
+  "default_target": "apps/api",
+  "required_tools": ["python>=3.12", "uv", "docker"],
+  "generated_paths": [
+    "apps/api/app",
+    "apps/api/tests",
+    "apps/api/alembic",
+    "apps/api/pyproject.toml",
+    "apps/api/Makefile"
+  ],
+  "post_create_steps": [
+    "make api-install",
+    "cp apps/api/.env.example apps/api/.env",
+    "make api-test-up",
+    "make api-ci"
+  ],
+  "verification": [
+    "make api-lint",
+    "make api-format-check",
+    "make api-typecheck",
+    "make api-check-ai"
+  ]
+}

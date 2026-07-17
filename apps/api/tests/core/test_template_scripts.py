@@ -36,6 +36,42 @@ def test_project_name_package_is_prefixed_when_slug_starts_with_number() -> None
     assert names.package_name == "project_2026_reports"
 
 
+def test_load_template_manifest() -> None:
+    create_project = _load_script("create_project")
+
+    manifest = create_project.load_template_manifest("fastapi-api")
+
+    assert manifest.id == "fastapi-api"
+    assert manifest.source.name == "api"
+    assert "make api-ci" in manifest.post_create_steps
+    assert "fastapi-api" in create_project.list_template_ids()
+
+
+def test_load_template_manifest_rejects_missing_fields(tmp_path: Path) -> None:
+    create_project = _load_script("create_project")
+    template_dir = tmp_path / "broken"
+    template_dir.mkdir()
+    (template_dir / "template.json").write_text('{"id": "broken"}', encoding="utf-8")
+
+    try:
+        create_project.load_template_manifest("broken", root=tmp_path)
+    except ValueError as exc:
+        assert "missing required fields" in str(exc)
+    else:
+        raise AssertionError("Expected invalid template manifest to fail")
+
+
+def test_load_template_manifest_rejects_unknown_template() -> None:
+    create_project = _load_script("create_project")
+
+    try:
+        create_project.load_template_manifest("missing-template")
+    except ValueError as exc:
+        assert "Unknown template" in str(exc)
+    else:
+        raise AssertionError("Expected unknown template to fail")
+
+
 def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
     create_project = _load_script("create_project")
 

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 ROOT = Path(__file__).resolve().parents[1]
+TEMPLATES_ROOT = ROOT / "templates"
 
 DEFAULT_EXCLUDES = {
     ".git",
@@ -50,6 +52,32 @@ class ProjectNames:
     slug: str
 
 
+@dataclass(frozen=True)
+class TemplateManifest:
+    id: str
+    name: str
+    description: str
+    source: Path
+    default_target: str
+    required_tools: list[str]
+    generated_paths: list[str]
+    post_create_steps: list[str]
+    verification: list[str]
+
+
+REQUIRED_MANIFEST_FIELDS = {
+    "id",
+    "name",
+    "description",
+    "source",
+    "default_target",
+    "required_tools",
+    "generated_paths",
+    "post_create_steps",
+    "verification",
+}
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
     return slug or "new-project"
@@ -70,6 +98,44 @@ def build_project_names(name: str) -> ProjectNames:
         package_name=package_name_from_slug(slug),
         slug=slug,
     )
+
+
+def load_template_manifest(template_id: str, *, root: Path = TEMPLATES_ROOT) -> TemplateManifest:
+    manifest_path = root / template_id / "template.json"
+    if not manifest_path.exists():
+        raise ValueError(f"Unknown template: {template_id}")
+
+    try:
+        raw: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid template manifest JSON: {manifest_path}") from exc
+
+    missing = REQUIRED_MANIFEST_FIELDS - raw.keys()
+    if missing:
+        fields = ", ".join(sorted(missing))
+        raise ValueError(f"Template manifest {manifest_path} is missing required fields: {fields}")
+
+    source = (manifest_path.parent / str(raw["source"])).resolve()
+    if not source.exists():
+        raise ValueError(f"Template source does not exist: {source}")
+
+    return TemplateManifest(
+        id=str(raw["id"]),
+        name=str(raw["name"]),
+        description=str(raw["description"]),
+        source=source,
+        default_target=str(raw["default_target"]),
+        required_tools=[str(item) for item in raw["required_tools"]],
+        generated_paths=[str(item) for item in raw["generated_paths"]],
+        post_create_steps=[str(item) for item in raw["post_create_steps"]],
+        verification=[str(item) for item in raw["verification"]],
+    )
+
+
+def list_template_ids(*, root: Path = TEMPLATES_ROOT) -> list[str]:
+    if not root.exists():
+        return []
+    return sorted(path.name for path in root.iterdir() if (path / "template.json").exists())
 
 
 def _matches_exclude(path: Path, patterns: Iterable[str]) -> bool:
