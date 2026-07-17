@@ -1,0 +1,4 @@
+interface:
+  display_name: "DDIA Architecture Review"
+  short_description: "Review data-intensive system designs"
+  default_prompt: "Use $ddia-architecture-review to review this data-intensive architecture and identify tradeoffs, risks, and validation steps."
