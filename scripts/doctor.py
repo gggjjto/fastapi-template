@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -12,6 +13,7 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = ROOT / "apps" / "api"
+TEMPLATES_ROOT = ROOT / "templates"
 
 
 @dataclass(frozen=True)
@@ -19,6 +21,12 @@ class CheckResult:
     name: str
     ok: bool
     detail: str
+
+
+@dataclass(frozen=True)
+class DoctorProfile:
+    template_id: str
+    required_tools: list[str]
 
 
 def _run(command: Sequence[str], *, cwd: Path = ROOT) -> Optional[subprocess.CompletedProcess[str]]:
@@ -119,11 +127,46 @@ def check_docker_compose() -> CheckResult:
     return CheckResult("docker compose", result.returncode == 0, detail)
 
 
-def collect_checks() -> list[CheckResult]:
+def list_template_ids(*, root: Path = TEMPLATES_ROOT) -> list[str]:
+    if not root.exists():
+        return []
+    return sorted(path.name for path in root.iterdir() if (path / "template.json").exists())
+
+
+def load_doctor_profile(template_id: str, *, root: Path = TEMPLATES_ROOT) -> DoctorProfile:
+    manifest_path = root / template_id / "template.json"
+    if not manifest_path.exists():
+        raise ValueError(f"Unknown template: {template_id}")
+
+    try:
+        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid template manifest JSON: {manifest_path}") from exc
+
+    return DoctorProfile(
+        template_id=template_id,
+        required_tools=[str(tool) for tool in raw.get("required_tools", [])],
+    )
+
+
+def collect_tool_checks(required_tools: Sequence[str]) -> list[CheckResult]:
+    checks: list[CheckResult] = []
+    for tool in required_tools:
+        if tool.startswith("python"):
+            checks.append(check_python())
+        elif tool == "uv":
+            checks.append(check_command("uv"))
+        elif tool == "docker":
+            checks.append(check_docker_compose())
+        else:
+            checks.append(check_command(tool))
+    return checks
+
+
+def collect_checks(template_id: str = "fastapi-api") -> list[CheckResult]:
+    profile = load_doctor_profile(template_id)
     return [
-        check_python(),
-        check_command("uv"),
-        check_docker_compose(),
+        *collect_tool_checks(profile.required_tools),
         check_api_root(),
         check_env_file(),
         check_env_var("APP_DATABASE_URL"),
@@ -132,8 +175,11 @@ def collect_checks() -> list[CheckResult]:
     ]
 
 
-def render_results(results: Sequence[CheckResult]) -> str:
-    lines = ["Development environment check:"]
+def render_results(results: Sequence[CheckResult], *, template_id: Optional[str] = None) -> str:
+    title = "Development environment check"
+    if template_id:
+        title = f"{title} ({template_id})"
+    lines = [f"{title}:"]
     for result in results:
         marker = "OK" if result.ok else "FAIL"
         lines.append(f"- [{marker}] {result.name}: {result.detail}")
@@ -143,14 +189,20 @@ def render_results(results: Sequence[CheckResult]) -> str:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Check local development prerequisites.")
     parser.add_argument(
+        "--template",
+        default="fastapi-api",
+        choices=list_template_ids() or ["fastapi-api"],
+        help="Template profile to check.",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="Return non-zero when any recommended local setup check fails.",
     )
     args = parser.parse_args(argv)
 
-    results = collect_checks()
-    print(render_results(results))
+    results = collect_checks(args.template)
+    print(render_results(results, template_id=args.template))
 
     if args.strict and any(not result.ok for result in results):
         return 1

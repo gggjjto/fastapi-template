@@ -224,3 +224,65 @@ def test_doctor_render_results() -> None:
 
     assert "[OK] python: 3.12.0" in output
     assert "[FAIL] .env: missing" in output
+
+
+def test_doctor_loads_template_profile() -> None:
+    doctor = _load_script("doctor")
+
+    profile = doctor.load_doctor_profile("fastapi-api")
+
+    assert profile.template_id == "fastapi-api"
+    assert profile.required_tools == ["python>=3.12", "uv", "docker"]
+
+
+def test_doctor_collects_checks_for_template(monkeypatch) -> None:
+    doctor = _load_script("doctor")
+
+    monkeypatch.setattr(
+        doctor, "check_python", lambda: doctor.CheckResult("python", True, "3.12.0")
+    )
+    monkeypatch.setattr(
+        doctor, "check_command", lambda command: doctor.CheckResult(command, True, "ok")
+    )
+    monkeypatch.setattr(
+        doctor,
+        "check_docker_compose",
+        lambda: doctor.CheckResult("docker compose", True, "ok"),
+    )
+    monkeypatch.setattr(
+        doctor, "check_api_root", lambda: doctor.CheckResult("apps/api", True, "ok")
+    )
+    monkeypatch.setattr(
+        doctor, "check_env_file", lambda: doctor.CheckResult("apps/api/.env", True, "ok")
+    )
+    monkeypatch.setattr(
+        doctor,
+        "check_env_var",
+        lambda name: doctor.CheckResult(name, True, "optional"),
+    )
+
+    results = doctor.collect_checks("fastapi-api")
+
+    assert [result.name for result in results] == [
+        "python",
+        "uv",
+        "docker compose",
+        "apps/api",
+        "apps/api/.env",
+        "APP_DATABASE_URL",
+        "APP_REDIS_URL",
+        "APP_JWT_SECRET",
+    ]
+    assert "node" not in {result.name for result in results}
+    assert "pnpm" not in {result.name for result in results}
+
+
+def test_doctor_rejects_unknown_template() -> None:
+    doctor = _load_script("doctor")
+
+    try:
+        doctor.load_doctor_profile("missing-template")
+    except ValueError as exc:
+        assert "Unknown template: missing-template" in str(exc)
+    else:
+        raise AssertionError("Expected unknown doctor template to fail")

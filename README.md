@@ -65,6 +65,7 @@ Check local prerequisites:
 
 ```bash
 make doctor
+make doctor template=fastapi-api
 ```
 
 Create a copy of the template with project naming applied:

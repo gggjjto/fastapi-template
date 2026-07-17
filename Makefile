@@ -37,7 +37,7 @@ help:
 	@echo "  clean               Remove workspace caches"
 
 doctor:
-	python3 scripts/doctor.py
+	python3 scripts/doctor.py --template "$(or $(template),fastapi-api)"
 
 create-project:
 	python3 scripts/create_project.py "$(name)" "$(target)" --template "$(or $(template),fastapi-api)"

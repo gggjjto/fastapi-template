@@ -22,6 +22,8 @@ Each template lives under `templates/<id>/template.json` and defines:
 
 Template manifests should point to maintained sources whenever practical. Avoid
 copying large duplicate template trees unless the source needs to diverge.
+The same manifest also drives `scripts/doctor.py --template <id>`, so keep
+`required_tools` scoped to tools the generated template actually needs.
 
 ## Template Options
 

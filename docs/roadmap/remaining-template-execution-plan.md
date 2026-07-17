@@ -32,6 +32,8 @@ Known verification already completed:
   and `apps/web` imports it through a workspace dependency.
 - Phase 5.1 added manifest-backed `--with-*` capability flags with dependency
   validation and user-facing option docs.
+- Phase 5.2 added manifest-backed doctor profiles for `fastapi-api`, including
+  `make doctor template=fastapi-api`.
 
 ## Commit Strategy
 
