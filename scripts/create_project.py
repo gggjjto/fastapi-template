@@ -44,6 +44,19 @@ TEXT_SUFFIXES = {
     ".yml",
 }
 
+WORKSPACE_SUPPORT_PATHS = [
+    ".github",
+    ".gitignore",
+    ".pre-commit-config.yaml",
+    "AGENTS.md",
+    "LICENSE",
+    "Makefile",
+    "README.md",
+    "docs/conventions",
+    "docs/recipes",
+    "scripts",
+]
+
 
 @dataclass(frozen=True)
 class ProjectNames:
@@ -146,8 +159,8 @@ def _matches_exclude(path: Path, patterns: Iterable[str]) -> bool:
     return False
 
 
-def should_copy(path: Path, excludes: Iterable[str] = DEFAULT_EXCLUDES) -> bool:
-    relative = path.relative_to(ROOT)
+def should_copy(path: Path, *, base: Path = ROOT, excludes: Iterable[str] = DEFAULT_EXCLUDES) -> bool:
+    relative = path.relative_to(base)
     return not _matches_exclude(relative, excludes)
 
 
@@ -189,7 +202,39 @@ def rewrite_text(path: Path, names: ProjectNames) -> None:
         path.write_text(updated, encoding="utf-8")
 
 
-def copy_template(target: Path, names: ProjectNames, *, force: bool = False) -> None:
+def _copy_tree(source: Path, destination: Path, names: ProjectNames, *, base: Path) -> None:
+    if source.is_file():
+        if should_copy(source, base=base):
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            rewrite_text(destination, names)
+        return
+
+    for item in source.rglob("*"):
+        if not should_copy(item, base=base):
+            continue
+
+        relative = item.relative_to(source)
+        output = destination / relative
+
+        if item.is_dir():
+            output.mkdir(parents=True, exist_ok=True)
+            continue
+
+        output.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, output)
+        rewrite_text(output, names)
+
+
+def copy_template(
+    target: Path,
+    names: ProjectNames,
+    *,
+    manifest: Optional[TemplateManifest] = None,
+    force: bool = False,
+) -> None:
+    manifest = manifest or load_template_manifest("fastapi-api")
+
     if target.exists():
         if not force:
             raise FileExistsError(f"Target already exists: {target}")
@@ -198,28 +243,25 @@ def copy_template(target: Path, names: ProjectNames, *, force: bool = False) -> 
     else:
         target.mkdir(parents=True)
 
-    for source in ROOT.rglob("*"):
-        if source == target or target in source.parents:
+    for path_name in WORKSPACE_SUPPORT_PATHS:
+        source = ROOT / path_name
+        if not source.exists():
             continue
-        if not should_copy(source):
-            continue
+        _copy_tree(source, target / path_name, names, base=ROOT)
 
-        relative = source.relative_to(ROOT)
-        destination = target / relative
-
-        if source.is_dir():
-            destination.mkdir(parents=True, exist_ok=True)
-            continue
-
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        rewrite_text(destination, names)
+    _copy_tree(manifest.source, target / manifest.default_target, names, base=manifest.source)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Create a project from this template.")
     parser.add_argument("name", help="New project name, for example my-saas-api.")
     parser.add_argument("target", type=Path, help="Directory to create or populate.")
+    parser.add_argument(
+        "--template",
+        default="fastapi-api",
+        choices=list_template_ids() or ["fastapi-api"],
+        help="Template id to generate.",
+    )
     parser.add_argument(
         "--force",
         action="store_true",
@@ -228,15 +270,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     names = build_project_names(args.name)
+    manifest = load_template_manifest(args.template)
     target = args.target.expanduser().resolve()
-    copy_template(target, names, force=args.force)
+    copy_template(target, names, manifest=manifest, force=args.force)
 
-    print(f"Created {names.display_name} at {target}")
+    print(f"Created {names.display_name} from {manifest.id} at {target}")
     print("Next steps:")
     print(f"  cd {target}")
-    print("  make api-install")
-    print("  cp apps/api/.env.example apps/api/.env")
-    print("  make api-test-up && make api-ci")
+    for step in manifest.post_create_steps:
+        print(f"  {step}")
     return 0
 
 

@@ -6,6 +6,10 @@
   "default_target": "apps/api",
   "required_tools": ["python>=3.12", "uv", "docker"],
   "generated_paths": [
+    "Makefile",
+    "README.md",
+    "scripts/create_project.py",
+    "scripts/doctor.py",
     "apps/api/app",
     "apps/api/tests",
     "apps/api/alembic",

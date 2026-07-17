@@ -29,7 +29,7 @@ doctor:
 	python3 scripts/doctor.py
 
 create-project:
-	python3 scripts/create_project.py "$(name)" "$(target)"
+	python3 scripts/create_project.py "$(name)" "$(target)" --template "$(or $(template),fastapi-api)"
 
 api-install:
 	$(MAKE) -C apps/api install

@@ -83,9 +83,24 @@ def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
     assert (target / "apps/api/pyproject.toml").exists()
     assert (target / "README.md").read_text(encoding="utf-8").startswith("# Demo Api")
     assert "demo-api:local" in (target / "apps/api/Makefile").read_text(encoding="utf-8")
+    assert (target / "scripts/create_project.py").exists()
     assert not (target / ".git").exists()
     assert not (target / ".venv").exists()
     assert not (target / ".omx").exists()
+    assert not (target / "templates").exists()
+
+
+def test_template_copy_uses_selected_manifest(tmp_path: Path) -> None:
+    create_project = _load_script("create_project")
+
+    names = create_project.build_project_names("Selected API")
+    manifest = create_project.load_template_manifest("fastapi-api")
+    target = tmp_path / "selected-api"
+
+    create_project.copy_template(target, names, manifest=manifest)
+
+    for generated_path in manifest.generated_paths:
+        assert (target / generated_path).exists(), generated_path
 
 
 def test_doctor_render_results() -> None:
