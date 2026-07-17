@@ -1,8 +1,9 @@
 # Rapid Development Template
 
-A personal rapid-development template workspace, starting with a
-production-minded FastAPI backend in `apps/api` and designed to grow into
-frontend, worker, CLI, SDK, and automation templates when needed.
+A personal rapid-development template workspace with a production-minded
+FastAPI backend in `apps/api`, a Next.js frontend in `apps/web`, and
+Turborepo orchestration for growing into workers, CLIs, SDKs, and automation
+templates when needed.
 
 ## Why this template
 
@@ -13,13 +14,23 @@ frontend, worker, CLI, SDK, and automation templates when needed.
 - Ready for production hardening and CI-backed workflows
 - i18n error messages and async SQLAlchemy + Alembic setup
 - Recipes and scripts for spinning up new projects from the template
+- Next.js App Router web workspace with pnpm + Turborepo coordination
 
 ## Get started
 
 ```bash
+pnpm install
 make api-install
 cp apps/api/.env.example apps/api/.env
+make api-test-up
+make dev
+```
+
+Run API or web independently when you only need one side:
+
+```bash
 make api-dev
+make web-dev
 ```
 
 Or launch the full stack:
@@ -30,6 +41,18 @@ docker compose up
 ```
 
 API docs are available at `http://127.0.0.1:8000/docs`.
+The web app runs at `http://localhost:3000`.
+
+## Workspace commands
+
+```bash
+make lint         # Turbo lint across workspace packages
+make typecheck    # Turbo typecheck across workspace packages
+make test         # Turbo test; API tests require make api-test-up
+make build        # Turbo build across workspace packages
+make api-ci       # Backend CI checks only
+make web-build    # Frontend build only
+```
 
 ## Create a new project
 

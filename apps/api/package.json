@@ -1,0 +1,12 @@
+{
+  "name": "@rapid-template/api",
+  "private": true,
+  "scripts": {
+    "dev": "make dev",
+    "build": "make typecheck",
+    "lint": "make lint",
+    "typecheck": "make typecheck",
+    "test": "make test",
+    "clean": "make clean"
+  }
+}

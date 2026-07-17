@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "dist/**"]
+    },
+    "@rapid-template/api#build": {
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "outputs": ["coverage/**", "coverage.xml"]
+    },
+    "@rapid-template/api#test": {
+      "outputs": []
+    },
+    "@rapid-template/web#test": {
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

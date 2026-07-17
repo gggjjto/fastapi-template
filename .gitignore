@@ -11,6 +11,10 @@ htmlcov/
 .venv/
 .env
 .DS_Store
+node_modules/
+.next/
+.turbo/
+pnpm-debug.log*
 
 # Editor / IDE
 .idea/

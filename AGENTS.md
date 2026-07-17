@@ -6,12 +6,24 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ```bash
 # Setup
+pnpm install
 cd apps/api
 uv venv && source .venv/bin/activate
 uv sync --dev
 cp .env.example .env
 
-# Development
+# Workspace development
+make dev              # Turbo dev for API + web
+make lint             # Turbo lint across workspace
+make typecheck        # Turbo typecheck across workspace
+make test             # Turbo test (API tests require make api-test-up)
+make build            # Turbo build across workspace
+make web-dev          # Next.js dev server
+make web-lint         # Web ESLint
+make web-typecheck    # Web TypeScript check
+make web-build        # Web production build
+
+# API development
 make api-dev          # uvicorn with --reload
 make api-lint         # ruff check
 make api-lint-fix     # ruff check --fix (auto-fix)

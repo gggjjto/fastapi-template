@@ -1,4 +1,5 @@
-.PHONY: help doctor create-project api-install api-dev api-lint api-lint-fix api-format \
+.PHONY: help doctor create-project install dev lint typecheck test build web-dev \
+        web-lint web-typecheck web-build api-install api-dev api-lint api-lint-fix api-format \
         api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
         api-test-down api-migrate api-revision api-docker-build api-docker-run clean
 
@@ -6,6 +7,16 @@ help:
 	@echo "Available workspace targets:"
 	@echo "  doctor              Check local development prerequisites"
 	@echo "  create-project      Create a new project: make create-project name=my-app target=../my-app"
+	@echo "  install             Install JS workspace dependencies"
+	@echo "  dev                 Run all workspace dev tasks through Turbo"
+	@echo "  lint                Run all workspace lint tasks through Turbo"
+	@echo "  typecheck           Run all workspace typecheck tasks through Turbo"
+	@echo "  test                Run all workspace test tasks through Turbo"
+	@echo "  build               Run all workspace build tasks through Turbo"
+	@echo "  web-dev             Run Next.js web dev server"
+	@echo "  web-lint            Run web ESLint"
+	@echo "  web-typecheck       Run web TypeScript check"
+	@echo "  web-build           Build web app"
 	@echo "  api-install         Install API dependencies"
 	@echo "  api-dev             Run API dev server with --reload"
 	@echo "  api-lint            Run API ruff check"
@@ -30,6 +41,36 @@ doctor:
 
 create-project:
 	python3 scripts/create_project.py "$(name)" "$(target)" --template "$(or $(template),fastapi-api)"
+
+install:
+	pnpm install
+
+dev:
+	pnpm dev
+
+lint:
+	pnpm lint
+
+typecheck:
+	pnpm typecheck
+
+test:
+	pnpm test
+
+build:
+	pnpm build
+
+web-dev:
+	pnpm --filter @rapid-template/web dev
+
+web-lint:
+	pnpm --filter @rapid-template/web lint
+
+web-typecheck:
+	pnpm --filter @rapid-template/web typecheck
+
+web-build:
+	pnpm --filter @rapid-template/web build
 
 api-install:
 	$(MAKE) -C apps/api install
@@ -83,5 +124,6 @@ api-docker-run:
 	$(MAKE) -C apps/api docker-run
 
 clean:
+	pnpm clean
 	$(MAKE) -C apps/api clean
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
