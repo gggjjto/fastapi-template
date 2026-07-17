@@ -30,6 +30,8 @@ Known verification already completed:
   workspace orchestration.
 - Phase 4.3 added `packages/config` for shared TypeScript and ESLint defaults,
   and `apps/web` imports it through a workspace dependency.
+- Phase 5.1 added manifest-backed `--with-*` capability flags with dependency
+  validation and user-facing option docs.
 
 ## Commit Strategy
 

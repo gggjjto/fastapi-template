@@ -46,6 +46,14 @@ def test_load_template_manifest() -> None:
     assert manifest.id == "fastapi-api"
     assert manifest.source.name == "api"
     assert "make api-ci" in manifest.post_create_steps
+    assert {option.id for option in manifest.options} == {
+        "ai",
+        "auth",
+        "rbac",
+        "redis",
+        "sentry",
+        "worker",
+    }
     assert "fastapi-api" in create_project.list_template_ids()
 
 
@@ -72,6 +80,35 @@ def test_load_template_manifest_rejects_unknown_template() -> None:
         assert "Unknown template" in str(exc)
     else:
         raise AssertionError("Expected unknown template to fail")
+
+
+def test_template_options_validate_dependencies() -> None:
+    create_project = _load_script("create_project")
+
+    manifest = create_project.load_template_manifest("fastapi-api")
+    selected = create_project.validate_template_options(manifest, ["auth", "rbac"])
+
+    assert [option.id for option in selected] == ["auth", "rbac"]
+
+    try:
+        create_project.validate_template_options(manifest, ["rbac"])
+    except ValueError as exc:
+        assert "--with-rbac requires --with-auth" in str(exc)
+    else:
+        raise AssertionError("Expected rbac without auth to fail")
+
+
+def test_template_options_reject_unsupported_option() -> None:
+    create_project = _load_script("create_project")
+
+    manifest = create_project.load_template_manifest("fastapi-api")
+
+    try:
+        create_project.validate_template_options(manifest, ["mobile"])
+    except ValueError as exc:
+        assert "does not support option(s): mobile" in str(exc)
+    else:
+        raise AssertionError("Expected unsupported option to fail")
 
 
 def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
@@ -127,6 +164,52 @@ def test_generated_fastapi_template_static_checks(tmp_path: Path) -> None:
             timeout=60,
         )
         assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_generator_prints_selected_template_options(tmp_path: Path) -> None:
+    target = tmp_path / "selected-options-api"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parents[4] / "scripts" / "create_project.py"),
+            "Selected Options API",
+            str(target),
+            "--with-auth",
+            "--with-rbac",
+            "--with-redis",
+            "--with-worker",
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Selected capabilities:" in result.stdout
+    assert "--with-auth" in result.stdout
+    assert "--with-worker" in result.stdout
+    assert (target / "apps/api/app").exists()
+
+
+def test_generator_rejects_invalid_template_option_combination(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parents[4] / "scripts" / "create_project.py"),
+            "Invalid Options API",
+            str(tmp_path / "invalid-options-api"),
+            "--with-worker",
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 2
+    assert "--with-worker requires --with-redis" in result.stderr
 
 
 def test_doctor_render_results() -> None:

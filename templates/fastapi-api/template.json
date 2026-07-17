@@ -30,5 +30,91 @@
     "make api-format-check",
     "make api-typecheck",
     "make api-check-ai"
+  ],
+  "options": [
+    {
+      "id": "auth",
+      "flag": "--with-auth",
+      "description": "JWT access and refresh-token authentication endpoints.",
+      "files": [
+        "apps/api/app/auth",
+        "apps/api/tests/auth",
+        "apps/api/app/core/config.py"
+      ],
+      "env_vars": ["APP_JWT_SECRET", "APP_ACCESS_TOKEN_EXPIRE_MINUTES", "APP_REFRESH_TOKEN_EXPIRE_DAYS"],
+      "notes": "Currently included in the fastapi-api base template; the flag records intent for future slimmer variants.",
+      "requires": [],
+      "incompatible_with": []
+    },
+    {
+      "id": "rbac",
+      "flag": "--with-rbac",
+      "description": "Role, permission, and startup seed support for protected API capabilities.",
+      "files": [
+        "apps/api/app/auth/models.py",
+        "apps/api/app/auth/repository.py",
+        "apps/api/app/auth/seed.py",
+        "apps/api/tests/auth/test_seed.py"
+      ],
+      "env_vars": [],
+      "notes": "Requires auth because permissions are resolved for authenticated users.",
+      "requires": ["auth"],
+      "incompatible_with": []
+    },
+    {
+      "id": "redis",
+      "flag": "--with-redis",
+      "description": "Redis client lifecycle, cache helper, and test/development Redis services.",
+      "files": [
+        "apps/api/app/db/redis.py",
+        "apps/api/app/core/cache.py",
+        "apps/api/docker-compose.yml",
+        "apps/api/docker-compose.test.yml"
+      ],
+      "env_vars": ["APP_REDIS_URL"],
+      "notes": "Currently included in the fastapi-api base template.",
+      "requires": [],
+      "incompatible_with": []
+    },
+    {
+      "id": "worker",
+      "flag": "--with-worker",
+      "description": "Arq background worker, queue dependency, and scheduled-task registration surface.",
+      "files": [
+        "apps/api/app/worker.py",
+        "apps/api/app/core/arq.py",
+        "apps/api/tests/core/test_tasks.py"
+      ],
+      "env_vars": ["APP_REDIS_URL"],
+      "notes": "Requires Redis because Arq uses Redis as its broker.",
+      "requires": ["redis"],
+      "incompatible_with": []
+    },
+    {
+      "id": "sentry",
+      "flag": "--with-sentry",
+      "description": "Sentry error tracking initialization and configuration.",
+      "files": [
+        "apps/api/app/core/sentry.py",
+        "apps/api/app/main.py",
+        "apps/api/app/core/config.py"
+      ],
+      "env_vars": ["APP_SENTRY_DSN", "APP_SENTRY_TRACES_SAMPLE_RATE"],
+      "notes": "Currently included as opt-in runtime configuration; empty DSN keeps it disabled.",
+      "requires": [],
+      "incompatible_with": []
+    },
+    {
+      "id": "ai",
+      "flag": "--with-ai",
+      "description": "Placeholder for future AI provider wiring and recipes.",
+      "files": [
+        "docs/recipes"
+      ],
+      "env_vars": ["OPENAI_API_KEY", "OPENROUTER_API_KEY"],
+      "notes": "Documented only for now; no AI runtime files are generated yet.",
+      "requires": [],
+      "incompatible_with": []
+    }
   ]
 }

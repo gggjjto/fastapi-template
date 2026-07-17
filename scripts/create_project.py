@@ -66,6 +66,18 @@ class ProjectNames:
 
 
 @dataclass(frozen=True)
+class TemplateOption:
+    id: str
+    flag: str
+    description: str
+    files: list[str]
+    env_vars: list[str]
+    notes: str
+    requires: list[str]
+    incompatible_with: list[str]
+
+
+@dataclass(frozen=True)
 class TemplateManifest:
     id: str
     name: str
@@ -76,6 +88,7 @@ class TemplateManifest:
     generated_paths: list[str]
     post_create_steps: list[str]
     verification: list[str]
+    options: list[TemplateOption]
 
 
 REQUIRED_MANIFEST_FIELDS = {
@@ -88,6 +101,26 @@ REQUIRED_MANIFEST_FIELDS = {
     "generated_paths",
     "post_create_steps",
     "verification",
+    "options",
+}
+REQUIRED_OPTION_FIELDS = {
+    "id",
+    "flag",
+    "description",
+    "files",
+    "env_vars",
+    "notes",
+    "requires",
+    "incompatible_with",
+}
+
+OPTION_FLAGS = {
+    "auth": "--with-auth",
+    "rbac": "--with-rbac",
+    "worker": "--with-worker",
+    "redis": "--with-redis",
+    "sentry": "--with-sentry",
+    "ai": "--with-ai",
 }
 
 
@@ -132,6 +165,25 @@ def load_template_manifest(template_id: str, *, root: Path = TEMPLATES_ROOT) -> 
     if not source.exists():
         raise ValueError(f"Template source does not exist: {source}")
 
+    options = []
+    for item in raw["options"]:
+        missing_option_fields = REQUIRED_OPTION_FIELDS - item.keys()
+        if missing_option_fields:
+            fields = ", ".join(sorted(missing_option_fields))
+            raise ValueError(f"Template option in {manifest_path} is missing required fields: {fields}")
+        options.append(
+            TemplateOption(
+                id=str(item["id"]),
+                flag=str(item["flag"]),
+                description=str(item["description"]),
+                files=[str(path) for path in item["files"]],
+                env_vars=[str(env_var) for env_var in item["env_vars"]],
+                notes=str(item["notes"]),
+                requires=[str(option_id) for option_id in item["requires"]],
+                incompatible_with=[str(option_id) for option_id in item["incompatible_with"]],
+            )
+        )
+
     return TemplateManifest(
         id=str(raw["id"]),
         name=str(raw["name"]),
@@ -142,6 +194,7 @@ def load_template_manifest(template_id: str, *, root: Path = TEMPLATES_ROOT) -> 
         generated_paths=[str(item) for item in raw["generated_paths"]],
         post_create_steps=[str(item) for item in raw["post_create_steps"]],
         verification=[str(item) for item in raw["verification"]],
+        options=options,
     )
 
 
@@ -149,6 +202,30 @@ def list_template_ids(*, root: Path = TEMPLATES_ROOT) -> list[str]:
     if not root.exists():
         return []
     return sorted(path.name for path in root.iterdir() if (path / "template.json").exists())
+
+
+def validate_template_options(manifest: TemplateManifest, selected: Iterable[str]) -> list[TemplateOption]:
+    selected_ids = set(selected)
+    options_by_id = {option.id: option for option in manifest.options}
+    unsupported = selected_ids - options_by_id.keys()
+    if unsupported:
+        choices = ", ".join(sorted(options_by_id)) or "none"
+        invalid = ", ".join(sorted(unsupported))
+        raise ValueError(f"Template {manifest.id} does not support option(s): {invalid}. Supported: {choices}")
+
+    for option_id in selected_ids:
+        option = options_by_id[option_id]
+        missing = set(option.requires) - selected_ids
+        if missing:
+            required = ", ".join(f"--with-{item}" for item in sorted(missing))
+            raise ValueError(f"{option.flag} requires {required}")
+
+        conflicts = set(option.incompatible_with) & selected_ids
+        if conflicts:
+            conflict_flags = ", ".join(options_by_id[item].flag for item in sorted(conflicts))
+            raise ValueError(f"{option.flag} cannot be combined with {conflict_flags}")
+
+    return [options_by_id[option_id] for option_id in sorted(selected_ids)]
 
 
 def _matches_exclude(path: Path, patterns: Iterable[str]) -> bool:
@@ -271,14 +348,35 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         action="store_true",
         help="Allow copying into an existing directory.",
     )
+    for option_id, flag in OPTION_FLAGS.items():
+        parser.add_argument(
+            flag,
+            action="store_true",
+            dest=f"with_{option_id}",
+            help=f"Request the {option_id} capability when the selected template supports it.",
+        )
     args = parser.parse_args(argv)
 
     names = build_project_names(args.name)
     manifest = load_template_manifest(args.template)
+    selected_option_ids = [
+        option_id for option_id in OPTION_FLAGS if getattr(args, f"with_{option_id}")
+    ]
+    try:
+        selected_options = validate_template_options(manifest, selected_option_ids)
+    except ValueError as exc:
+        parser.error(str(exc))
+
     target = args.target.expanduser().resolve()
     copy_template(target, names, manifest=manifest, force=args.force)
 
     print(f"Created {names.display_name} from {manifest.id} at {target}")
+    if selected_options:
+        print("Selected capabilities:")
+        for option in selected_options:
+            print(f"  {option.flag}: {option.description}")
+            if option.notes:
+                print(f"    {option.notes}")
     print("Next steps:")
     print(f"  cd {target}")
     for step in manifest.post_create_steps:

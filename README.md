@@ -73,6 +73,19 @@ Create a copy of the template with project naming applied:
 make create-project name=my-saas-api target=../my-saas-api
 ```
 
+Template capability flags are available for planning future slimmer variants.
+They validate combinations and print selected capabilities while the current
+`fastapi-api` template still includes the production-minded backend surface by
+default:
+
+```bash
+python3 scripts/create_project.py my-api ../my-api --with-auth --with-rbac
+python3 scripts/create_project.py jobs-api ../jobs-api --with-redis --with-worker
+```
+
+See [`templates/fastapi-api/OPTIONS.md`](./templates/fastapi-api/OPTIONS.md)
+for the exact files and environment variables associated with each option.
+
 Then initialize the generated project:
 
 ```bash
