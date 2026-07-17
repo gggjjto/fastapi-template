@@ -32,22 +32,26 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: "apps/api/uv.lock"
 
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        working-directory: apps/api
         run: uv sync --dev --frozen
 
       - name: Ruff check
+        working-directory: apps/api
         run: uv run ruff check .
 
       - name: Ruff format check
+        working-directory: apps/api
         run: uv run ruff format --check .
 
       - name: AI workflow guard
-        run: uv run python scripts/check_ai_workflow.py
+        working-directory: apps/api
+        run: uv run python ../../scripts/check_ai_workflow.py
 
   typecheck:
     name: Type Check (mypy)
@@ -61,15 +65,17 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: "apps/api/uv.lock"
 
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        working-directory: apps/api
         run: uv sync --dev --frozen
 
       - name: Run mypy
+        working-directory: apps/api
         run: uv run mypy app
 
   security:
@@ -84,18 +90,21 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: "apps/api/uv.lock"
 
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        working-directory: apps/api
         run: uv sync --dev --frozen
 
       - name: Dependency vulnerability scan (pip-audit)
+        working-directory: apps/api
         run: uvx --from pip-audit pip-audit
 
       - name: Static security scan (bandit)
+        working-directory: apps/api
         run: uvx --from bandit bandit -q -r app
 
   test:
@@ -144,15 +153,17 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: "apps/api/uv.lock"
 
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        working-directory: apps/api
         run: uv sync --dev --frozen
 
       - name: Run pytest with coverage
+        working-directory: apps/api
         run: uv run pytest --cov --cov-report=xml --cov-report=term-missing -v
 
       - name: Upload coverage artifact
@@ -160,14 +171,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coverage
-          path: coverage.xml
+          path: apps/api/coverage.xml
           if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: codecov/codecov-action@v5
         with:
-          files: ./coverage.xml
+          files: ./apps/api/coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
@@ -205,18 +216,21 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: "apps/api/uv.lock"
 
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        working-directory: apps/api
         run: uv sync --dev --frozen
 
       - name: Apply migrations (upgrade head)
+        working-directory: apps/api
         run: uv run alembic upgrade head
 
       - name: Downgrade to base (验证回滚)
+        working-directory: apps/api
         run: uv run alembic downgrade base
 
   docker-build:
@@ -232,7 +246,7 @@ jobs:
       - name: Build image (no push)
         uses: docker/build-push-action@v7
         with:
-          context: .
+          context: apps/api
           push: false
           load: true
           tags: fastapi-template:ci

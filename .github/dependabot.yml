@@ -2,7 +2,7 @@ version: 2
 updates:
   # Python 依赖（pyproject.toml / uv.lock）
   - package-ecosystem: "uv"
-    directory: "/"
+    directory: "/apps/api"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -57,7 +57,7 @@ updates:
 
   # Dockerfile 基础镜像
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/apps/api"
     schedule:
       interval: "weekly"
       day: "monday"

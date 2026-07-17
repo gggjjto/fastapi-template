@@ -8,10 +8,10 @@
 
 ## Validation
 
-- `make lint`
-- `make format`
-- `make typecheck`
-- `make test` (with `make test-up`)
+- `make api-lint`
+- `make api-format-check`
+- `make api-typecheck`
+- `make api-test` (with `make api-test-up`)
 
 ## AI Workflow
 

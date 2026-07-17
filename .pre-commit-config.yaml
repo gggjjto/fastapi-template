@@ -10,6 +10,6 @@ repos:
     hooks:
       - id: mypy
         name: mypy (app)
-        entry: uv run mypy app
+        entry: bash -lc 'cd apps/api && uv run mypy app'
         language: system
         pass_filenames: false

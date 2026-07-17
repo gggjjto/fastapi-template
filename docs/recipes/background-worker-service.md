@@ -1,0 +1,32 @@
+# Background Worker Service
+
+Use this recipe when the app mainly accepts work and processes it asynchronously.
+
+Keep:
+
+- `app/core/arq.py`
+- `app/db/redis.py`
+- `app/worker.py`
+- Redis and Arq dependencies
+- Health endpoints for container orchestration
+
+Consider removing:
+
+- `app/auth` if the worker is never exposed as a user-facing API
+- `app/users` if there is no account model
+
+Add next:
+
+- Job submission endpoints
+- Idempotency keys for externally triggered jobs
+- Retry and dead-letter conventions
+- Job status persistence if clients need progress updates
+
+Verify:
+
+```bash
+make api-test-up
+make api-ci
+cd apps/api
+uv run arq app.worker.WorkerSettings
+```

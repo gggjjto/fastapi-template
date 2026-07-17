@@ -55,6 +55,8 @@ def check_forbidden_references() -> list[str]:
             continue
 
         path = ROOT / file_name
+        if not path.exists():
+            continue
         try:
             content = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:

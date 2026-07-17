@@ -831,17 +831,17 @@ Steps:
 Run locally:
 
 ```bash
-make test-up
-make ci
+make api-test-up
+make api-ci
 ```
 
 Targeted test examples:
 
 ```bash
-uv run pytest tests/core/test_middleware.py -v
-uv run pytest tests/core/test_error_handlers.py -v
-uv run pytest tests/auth/test_auth.py -v
-uv run pytest tests/users/test_users.py -v
+cd apps/api && uv run pytest tests/core/test_middleware.py -v
+cd apps/api && uv run pytest tests/core/test_error_handlers.py -v
+cd apps/api && uv run pytest tests/auth/test_auth.py -v
+cd apps/api && uv run pytest tests/users/test_users.py -v
 ```
 
 Coverage expectations:

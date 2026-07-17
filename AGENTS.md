@@ -6,44 +6,45 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ```bash
 # Setup
+cd apps/api
 uv venv && source .venv/bin/activate
 uv sync --dev
 cp .env.example .env
 
 # Development
-make dev          # uvicorn with --reload
-make lint         # ruff check
-make lint-fix     # ruff check --fix (auto-fix)
-make format       # ruff format
-make typecheck    # mypy app
-make test         # pytest (all tests)
-make cov          # pytest with coverage report
-make ci           # lint + format-check + typecheck + cov (mirrors CI)
+make api-dev          # uvicorn with --reload
+make api-lint         # ruff check
+make api-lint-fix     # ruff check --fix (auto-fix)
+make api-format       # ruff format
+make api-typecheck    # mypy app
+make api-test         # pytest (all tests)
+make api-cov          # pytest with coverage report
+make api-ci           # lint + format-check + typecheck + cov (mirrors CI)
 
 # Run a single test
-uv run pytest tests/users/test_users.py::test_get_user_by_id -v
+cd apps/api && uv run pytest tests/users/test_users.py::test_get_user_by_id -v
 
 # Database migrations (PostgreSQL workflow)
-make migrate                      # alembic upgrade head
-make revision m="describe change" # autogenerate migration (files named YYYY-MM-DD_slug.py)
+make api-migrate                      # alembic upgrade head
+make api-revision m="describe change" # autogenerate migration (files named YYYY-MM-DD_slug.py)
 
 # Background worker / scheduled tasks (requires Redis)
-uv run arq app.worker.WorkerSettings
+cd apps/api && uv run arq app.worker.WorkerSettings
 
 # Test containers
-make test-up      # start PostgreSQL (5433) + Redis (6380) for tests
-make test-down    # stop and remove test containers
+make api-test-up      # start PostgreSQL (5433) + Redis (6380) for tests
+make api-test-down    # stop and remove test containers
 
 # Full local stack (API + worker + PostgreSQL + Redis)
-docker compose up
+cd apps/api && docker compose up
 ```
 
 ## Architecture
 
-The app follows a **domain-oriented** structure: each feature domain owns all its artefacts instead of grouping by layer.
+The backend lives in `apps/api` and follows a **domain-oriented** structure: each feature domain owns all its artefacts instead of grouping by layer.
 
 ```
-app/
+apps/api/app/
 ├── auth/                # JWT auth domain
 │   ├── router.py        # POST /auth/token, /auth/refresh, /auth/logout, /auth/logout-all, GET /auth/me
 │   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse, MessageResponse
@@ -111,7 +112,7 @@ Both Redis and Sentry are opt-in via env vars. The app starts and runs normally 
 | Feature    | Enable via                   | What it unlocks                                                  |
 | ---------- | ---------------------------- | ---------------------------------------------------------------- |
 | Redis      | `APP_REDIS_URL=redis://...`  | `RedisClient`, `RedisCache`, `ArqPool`                           |
-| Task queue / scheduled jobs | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `uv run arq app.worker.WorkerSettings`; cron jobs live in `WorkerSettings.cron_jobs` |
+| Task queue / scheduled jobs | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `cd apps/api && uv run arq app.worker.WorkerSettings`; cron jobs live in `WorkerSettings.cron_jobs` |
 | Sentry     | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported       |
 
 
@@ -119,7 +120,7 @@ Both Redis and Sentry are opt-in via env vars. The app starts and runs normally 
 
 ### Testing
 
-Tests are **integration tests** and depend on real PostgreSQL + Redis. Start deps with `make test-up` (uses `docker-compose.test.yml`, ports 5433/6380, tmpfs storage).
+Tests are **integration tests** and depend on real PostgreSQL + Redis. Start deps with `make api-test-up` from the repository root (uses `apps/api/docker-compose.test.yml`, ports 5433/6380, tmpfs storage).
 
 - `httpx.AsyncClient` + `ASGITransport` drives the real app; `asgi-lifespan.LifespanManager` triggers startup/shutdown so `RedisClient` and `ArqPool` are really initialised.
 - `conftest.py` sets `APP_ENV=test`, `APP_DATABASE_URL` (PG), `APP_REDIS_URL` via `os.environ.setdefault` before importing the app.
@@ -131,7 +132,7 @@ Tests are **integration tests** and depend on real PostgreSQL + Redis. Start dep
 Test files mirror the domain structure under `tests/`:
 
 ```
-tests/
+apps/api/tests/
 ├── conftest.py
 ├── auth/
 │   └── test_auth.py

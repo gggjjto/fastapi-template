@@ -1,6 +1,8 @@
-# FastAPI AI Template
+# Rapid Development Template
 
-A compact FastAPI backend template optimized for AI-assisted development.
+A personal rapid-development template workspace, starting with a
+production-minded FastAPI backend in `apps/api` and designed to grow into
+frontend, worker, CLI, SDK, and automation templates when needed.
 
 ## Why this template
 
@@ -10,22 +12,50 @@ A compact FastAPI backend template optimized for AI-assisted development.
 - Structured logging, request-id tracing, rate limiting
 - Ready for production hardening and CI-backed workflows
 - i18n error messages and async SQLAlchemy + Alembic setup
+- Recipes and scripts for spinning up new projects from the template
 
 ## Get started
 
 ```bash
-uv sync --dev
-cp .env.example .env
-uv run uvicorn app.main:app --reload
+make api-install
+cp apps/api/.env.example apps/api/.env
+make api-dev
 ```
 
 Or launch the full stack:
 
 ```bash
+cd apps/api
 docker compose up
 ```
 
 API docs are available at `http://127.0.0.1:8000/docs`.
+
+## Create a new project
+
+Check local prerequisites:
+
+```bash
+make doctor
+```
+
+Create a copy of the template with project naming applied:
+
+```bash
+make create-project name=my-saas-api target=../my-saas-api
+```
+
+Then initialize the generated project:
+
+```bash
+cd ../my-saas-api
+make api-install
+cp apps/api/.env.example apps/api/.env
+make api-test-up
+make api-ci
+```
+
+Recipes for common project shapes live in [`docs/recipes`](./docs/recipes/README.md).
 
 ## AI workflow
 

@@ -1,82 +1,87 @@
-.PHONY: help install dev lint lint-fix format format-check typecheck test cov ci check-ai \
-        test-up test-down migrate revision docker-build docker-run clean
+.PHONY: help doctor create-project api-install api-dev api-lint api-lint-fix api-format \
+        api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
+        api-test-down api-migrate api-revision api-docker-build api-docker-run clean
 
 help:
-	@echo "Available targets:"
-	@echo "  install        Install dependencies (including dev)"
-	@echo "  dev            Run dev server with --reload"
-	@echo "  lint           Run ruff check"
-	@echo "  lint-fix       Run ruff check --fix"
-	@echo "  format         Run ruff format"
-	@echo "  format-check   Check formatting (CI-friendly)"
-	@echo "  typecheck      Run mypy"
-	@echo "  check-ai       Guard .agents as the AI workflow source of truth"
-	@echo "  test           Run pytest (requires test-up services)"
-	@echo "  cov            Run pytest with coverage"
-	@echo "  ci             Run all CI checks locally (lint + format-check + typecheck + cov)"
-	@echo "  test-up        Start PostgreSQL + Redis containers for tests"
-	@echo "  test-down      Stop and remove test containers"
-	@echo "  migrate        Apply Alembic migrations"
-	@echo "  revision m=... Autogenerate Alembic revision"
-	@echo "  docker-build   Build Docker image"
-	@echo "  docker-run     Run Docker image on :8000"
-	@echo "  clean          Remove caches and build artefacts"
+	@echo "Available workspace targets:"
+	@echo "  doctor              Check local development prerequisites"
+	@echo "  create-project      Create a new project: make create-project name=my-app target=../my-app"
+	@echo "  api-install         Install API dependencies"
+	@echo "  api-dev             Run API dev server with --reload"
+	@echo "  api-lint            Run API ruff check"
+	@echo "  api-lint-fix        Run API ruff check --fix"
+	@echo "  api-format          Run API ruff format"
+	@echo "  api-format-check    Check API formatting"
+	@echo "  api-typecheck       Run API mypy"
+	@echo "  api-check-ai        Guard .agents as the AI workflow source of truth"
+	@echo "  api-test            Run API pytest (requires api-test-up services)"
+	@echo "  api-cov             Run API pytest with coverage"
+	@echo "  api-ci              Run API CI checks locally"
+	@echo "  api-test-up         Start API PostgreSQL + Redis test containers"
+	@echo "  api-test-down       Stop API test containers"
+	@echo "  api-migrate         Apply API Alembic migrations"
+	@echo "  api-revision m=...  Autogenerate API Alembic revision"
+	@echo "  api-docker-build    Build API Docker image"
+	@echo "  api-docker-run      Run API Docker image on :8000"
+	@echo "  clean               Remove workspace caches"
 
-install:
-	uv sync --dev
+doctor:
+	python3 scripts/doctor.py
 
-dev:
-	uv run uvicorn app.main:app --reload
+create-project:
+	python3 scripts/create_project.py "$(name)" "$(target)"
 
-lint:
-	uv run ruff check .
+api-install:
+	$(MAKE) -C apps/api install
 
-lint-fix:
-	uv run ruff check --fix .
+api-dev:
+	$(MAKE) -C apps/api dev
 
-format:
-	uv run ruff format .
+api-lint:
+	$(MAKE) -C apps/api lint
 
-format-check:
-	uv run ruff format --check .
+api-lint-fix:
+	$(MAKE) -C apps/api lint-fix
 
-typecheck:
-	uv run mypy app
+api-format:
+	$(MAKE) -C apps/api format
 
-check-ai:
-	uv run python scripts/check_ai_workflow.py
+api-format-check:
+	$(MAKE) -C apps/api format-check
 
-test:
-	uv run pytest
+api-typecheck:
+	$(MAKE) -C apps/api typecheck
 
-cov:
-	uv run pytest --cov --cov-report=term-missing --cov-report=xml
+api-check-ai:
+	$(MAKE) -C apps/api check-ai
 
-ci: lint format-check typecheck check-ai cov
+api-test:
+	$(MAKE) -C apps/api test
 
-test-up:
-	docker compose -f docker-compose.test.yml up -d --wait
+api-cov:
+	$(MAKE) -C apps/api cov
 
-test-down:
-	docker compose -f docker-compose.test.yml down -v
+api-ci:
+	$(MAKE) -C apps/api ci
 
-migrate:
-	uv run alembic upgrade head
+api-test-up:
+	$(MAKE) -C apps/api test-up
 
-revision:
-	uv run alembic revision --autogenerate -m "$(m)"
+api-test-down:
+	$(MAKE) -C apps/api test-down
 
-docker-build:
-	docker build -t fastapi-template:local .
+api-migrate:
+	$(MAKE) -C apps/api migrate
 
-docker-run:
-	docker run --rm -p 8000:8000 \
-		-e APP_JWT_SECRET=local-dev \
-		-e APP_DATABASE_URL=sqlite+aiosqlite:///./app.db \
-		-e APP_DB_CREATE_TABLES_ON_STARTUP=true \
-		fastapi-template:local
+api-revision:
+	$(MAKE) -C apps/api revision m="$(m)"
+
+api-docker-build:
+	$(MAKE) -C apps/api docker-build
+
+api-docker-run:
+	$(MAKE) -C apps/api docker-run
 
 clean:
-	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage coverage.xml htmlcov \
-		dist build *.egg-info
-	find . -type d -name "__pycache__" -exec rm -rf {} +
+	$(MAKE) -C apps/api clean
+	find . -type d -name "__pycache__" -prune -exec rm -rf {} +

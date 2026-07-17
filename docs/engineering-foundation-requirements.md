@@ -334,7 +334,7 @@ Deliver:
 - Do not mock database behavior for repository or service flows unless unavoidable.
 - Cover success and failure paths for each cross-cutting capability.
 - Maintain mypy and Ruff compliance.
-- Run `make ci` before final handoff when practical.
+- Run `make api-ci` before final handoff when practical.
 
 ## 9. Documentation Requirements
 
