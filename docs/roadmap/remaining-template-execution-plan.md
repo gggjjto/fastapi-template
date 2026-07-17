@@ -20,6 +20,15 @@ Known verification already completed:
 - `make api-docker-build`: passed.
 - Alembic `upgrade head` and `downgrade base`: passed on a clean test database.
 
+## Progress Log
+
+- Commit 1 and Commit 2 were completed as `refactor: move api into apps workspace`.
+- Commit 3 was completed as `docs: add remaining template execution roadmap`.
+- Phase 3 was completed with manifest, template-aware generator, and generated
+  FastAPI smoke-test commits.
+- Phase 4 has started with a real Next.js web app plus pnpm/Turborepo
+  workspace orchestration.
+
 ## Commit Strategy
 
 Use small commits with one reviewable purpose each. Do not mix generator logic,

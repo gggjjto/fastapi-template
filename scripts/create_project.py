@@ -251,6 +251,10 @@ def copy_template(
 
     _copy_tree(manifest.source, target / manifest.default_target, names, base=manifest.source)
 
+    overrides = TEMPLATES_ROOT / manifest.id / "overrides"
+    if overrides.exists():
+        _copy_tree(overrides, target, names, base=overrides)
+
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Create a project from this template.")

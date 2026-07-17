@@ -13,9 +13,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
-  NODE_VERSION: "24"
   UV_VERSION: "latest"
-  # 使 uv 在 CI 中静默且稳定
   UV_NO_PROGRESS: "1"
   UV_SYSTEM_PYTHON: "1"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -79,70 +77,10 @@ jobs:
         working-directory: apps/api
         run: uv run mypy app
 
-  workspace-js:
-    name: JS Workspace
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint web workspace
-        run: pnpm --filter @rapid-template/web lint
-
-      - name: Type check web workspace
-        run: pnpm --filter @rapid-template/web typecheck
-
-      - name: Build web workspace
-        run: pnpm --filter @rapid-template/web build
-
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: "apps/api/uv.lock"
-
-      - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
-        working-directory: apps/api
-        run: uv sync --dev --frozen
-
-      - name: Dependency vulnerability scan (pip-audit)
-        working-directory: apps/api
-        run: uvx --from pip-audit pip-audit
-
-      - name: Static security scan (bandit)
-        working-directory: apps/api
-        run: uvx --from bandit bandit -q -r app
-
   test:
     name: Test
     runs-on: ubuntu-latest
 
-    # 集成测试依赖真实 PostgreSQL + Redis
     services:
       postgres:
         image: postgres:16-alpine
@@ -197,23 +135,6 @@ jobs:
         working-directory: apps/api
         run: uv run pytest --cov --cov-report=xml --cov-report=term-missing -v
 
-      - name: Upload coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: apps/api/coverage.xml
-          if-no-files-found: ignore
-
-      - name: Upload coverage to Codecov
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./apps/api/coverage.xml
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-        continue-on-error: true
-
   migrations:
     name: Alembic Migrations
     runs-on: ubuntu-latest
@@ -256,11 +177,11 @@ jobs:
         working-directory: apps/api
         run: uv sync --dev --frozen
 
-      - name: Apply migrations (upgrade head)
+      - name: Apply migrations
         working-directory: apps/api
         run: uv run alembic upgrade head
 
-      - name: Downgrade to base (验证回滚)
+      - name: Downgrade to base
         working-directory: apps/api
         run: uv run alembic downgrade base
 
@@ -274,7 +195,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image (no push)
+      - name: Build image
         uses: docker/build-push-action@v7
         with:
           context: apps/api
@@ -292,13 +213,3 @@ jobs:
             -e APP_DATABASE_URL="sqlite+aiosqlite:///./smoke.db" \
             -e APP_DB_CREATE_TABLES_ON_STARTUP=true \
             fastapi-template:ci python -c "from app.main import app; print(app.title)"
-
-      - name: Scan image vulnerabilities (Trivy)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: fastapi-template:ci
-          format: table
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"

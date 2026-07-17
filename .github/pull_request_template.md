@@ -8,6 +8,9 @@
 
 ## Validation
 
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm build`
 - `make api-lint`
 - `make api-format-check`
 - `make api-typecheck`

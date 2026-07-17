@@ -84,7 +84,9 @@ def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
 
     assert (target / "apps/api/pyproject.toml").exists()
     assert (target / "README.md").read_text(encoding="utf-8").startswith("# Demo Api")
+    assert "Next.js" not in (target / "README.md").read_text(encoding="utf-8")
     assert "demo-api:local" in (target / "apps/api/Makefile").read_text(encoding="utf-8")
+    assert "pnpm" not in (target / "Makefile").read_text(encoding="utf-8")
     assert (target / "scripts/create_project.py").exists()
     assert not (target / ".git").exists()
     assert not (target / ".venv").exists()
