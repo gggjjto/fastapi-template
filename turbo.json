@@ -12,6 +12,9 @@
     "@rapid-template/api#build": {
       "outputs": []
     },
+    "@rapid-template/config#build": {
+      "outputs": []
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
@@ -23,6 +26,9 @@
       "outputs": ["coverage/**", "coverage.xml"]
     },
     "@rapid-template/api#test": {
+      "outputs": []
+    },
+    "@rapid-template/config#test": {
       "outputs": []
     },
     "@rapid-template/web#test": {

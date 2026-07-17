@@ -15,6 +15,7 @@ templates when needed.
 - i18n error messages and async SQLAlchemy + Alembic setup
 - Recipes and scripts for spinning up new projects from the template
 - Next.js App Router web workspace with pnpm + Turborepo coordination
+- Shared JS/TS config package for workspace apps
 
 ## Get started
 
@@ -53,6 +54,10 @@ make build        # Turbo build across workspace packages
 make api-ci       # Backend CI checks only
 make web-build    # Frontend build only
 ```
+
+Shared workspace packages live under `packages/`. Start with
+`packages/config` for reusable TypeScript and ESLint defaults; add SDK/UI
+packages only when an app actually imports them.
 
 ## Create a new project
 

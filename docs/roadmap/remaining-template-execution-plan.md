@@ -28,6 +28,8 @@ Known verification already completed:
   FastAPI smoke-test commits.
 - Phase 4 has started with a real Next.js web app plus pnpm/Turborepo
   workspace orchestration.
+- Phase 4.3 added `packages/config` for shared TypeScript and ESLint defaults,
+  and `apps/web` imports it through a workspace dependency.
 
 ## Commit Strategy
 
