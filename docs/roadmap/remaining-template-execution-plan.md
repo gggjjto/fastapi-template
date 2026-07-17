@@ -34,6 +34,8 @@ Known verification already completed:
   validation and user-facing option docs.
 - Phase 5.2 added manifest-backed doctor profiles for `fastapi-api`, including
   `make doctor template=fastapi-api`.
+- Phase 5.3 added template version metadata, generator version output, a
+  template changelog, and integration/deployment recipes.
 
 ## Commit Strategy
 

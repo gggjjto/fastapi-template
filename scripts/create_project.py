@@ -80,6 +80,7 @@ class TemplateOption:
 @dataclass(frozen=True)
 class TemplateManifest:
     id: str
+    version: str
     name: str
     description: str
     source: Path
@@ -93,6 +94,7 @@ class TemplateManifest:
 
 REQUIRED_MANIFEST_FIELDS = {
     "id",
+    "version",
     "name",
     "description",
     "source",
@@ -186,6 +188,7 @@ def load_template_manifest(template_id: str, *, root: Path = TEMPLATES_ROOT) -> 
 
     return TemplateManifest(
         id=str(raw["id"]),
+        version=str(raw["version"]),
         name=str(raw["name"]),
         description=str(raw["description"]),
         source=source,
@@ -370,7 +373,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     target = args.target.expanduser().resolve()
     copy_template(target, names, manifest=manifest, force=args.force)
 
-    print(f"Created {names.display_name} from {manifest.id} at {target}")
+    print(f"Created {names.display_name} from {manifest.id}@{manifest.version} at {target}")
     if selected_options:
         print("Selected capabilities:")
         for option in selected_options:

@@ -11,6 +11,11 @@ not need, and keep the backend quality gate intact.
 - [Background Worker Service](background-worker-service.md)
 - [AI-enabled API](ai-enabled-api.md)
 - [Data Processing API](data-processing-api.md)
+- [OpenRouter / OpenAI](openrouter-openai.md)
+- [Stripe Payments](stripe.md)
+- [File Uploads](file-upload.md)
+- [Admin Dashboard](admin-dashboard.md)
+- [Deployment](deployment.md)
 
 ## First Setup
 

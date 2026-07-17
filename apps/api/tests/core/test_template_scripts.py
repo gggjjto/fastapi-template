@@ -44,6 +44,7 @@ def test_load_template_manifest() -> None:
     manifest = create_project.load_template_manifest("fastapi-api")
 
     assert manifest.id == "fastapi-api"
+    assert manifest.version == "0.1.0"
     assert manifest.source.name == "api"
     assert "make api-ci" in manifest.post_create_steps
     assert {option.id for option in manifest.options} == {
@@ -67,6 +68,7 @@ def test_load_template_manifest_rejects_missing_fields(tmp_path: Path) -> None:
         create_project.load_template_manifest("broken", root=tmp_path)
     except ValueError as exc:
         assert "missing required fields" in str(exc)
+        assert "version" in str(exc)
     else:
         raise AssertionError("Expected invalid template manifest to fail")
 
@@ -187,10 +189,31 @@ def test_generator_prints_selected_template_options(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
+    assert "from fastapi-api@0.1.0" in result.stdout
     assert "Selected capabilities:" in result.stdout
     assert "--with-auth" in result.stdout
     assert "--with-worker" in result.stdout
     assert (target / "apps/api/app").exists()
+
+
+def test_generator_prints_template_version(tmp_path: Path) -> None:
+    target = tmp_path / "versioned-api"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parents[4] / "scripts" / "create_project.py"),
+            "Versioned API",
+            str(target),
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Created Versioned Api from fastapi-api@0.1.0" in result.stdout
 
 
 def test_generator_rejects_invalid_template_option_combination(tmp_path: Path) -> None:

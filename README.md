@@ -74,6 +74,8 @@ Create a copy of the template with project naming applied:
 make create-project name=my-saas-api target=../my-saas-api
 ```
 
+The generator prints the template id and version used for the new project.
+
 Template capability flags are available for planning future slimmer variants.
 They validate combinations and print selected capabilities while the current
 `fastapi-api` template still includes the production-minded backend surface by

@@ -1,5 +1,6 @@
 {
   "id": "fastapi-api",
+  "version": "0.1.0",
   "name": "FastAPI API",
   "description": "Production-minded FastAPI backend with auth, RBAC, PostgreSQL, Redis, Arq, Docker, and CI-ready quality gates.",
   "source": "../../apps/api",
