@@ -1,4 +1,5 @@
 ---
+name: write-tests
 description: Write or improve integration tests for existing code. Use when adding tests to untested endpoints, doing a coverage pass, or reviewing test quality.
 disable-model-invocation: true
 ---

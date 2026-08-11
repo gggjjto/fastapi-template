@@ -37,6 +37,9 @@ make api-format-check
 make api-typecheck
 make api-test
 make api-ci
+make harness-check
+# Optional model-backed evaluation
+make harness-eval
 ```
 
 ## AI workflow

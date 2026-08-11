@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "generated-harness-presence",
+      "fixture": "generated_project",
+      "command": ["python3", "scripts/check_ai_workflow.py"],
+      "assertions": [
+        {"kind": "path_exists", "path": ".agents/README.md"},
+        {"kind": "path_exists", "path": "skills-lock.json"}
+      ],
+      "expected_exit_code": 0,
+      "expected_output": ["AI workflow guard passed"],
+      "forbidden_output": ["AI workflow guard failed"]
+    },
+    {
+      "id": "endpoint-workflow-routing",
+      "fixture": "generated_project",
+      "command": ["python3", "scripts/check_ai_workflow.py"],
+      "assertions": [
+        {"kind": "file_contains", "path": ".agents/README.md", "value": "add-endpoint"},
+        {"kind": "path_exists", "path": ".agents/skills/add-endpoint/SKILL.md"}
+      ],
+      "expected_exit_code": 0,
+      "expected_output": ["AI workflow guard passed"],
+      "forbidden_output": []
+    },
+    {
+      "id": "bug-fix-workflow-routing",
+      "fixture": "generated_project",
+      "command": ["python3", "scripts/check_ai_workflow.py"],
+      "assertions": [
+        {"kind": "file_contains", "path": ".agents/README.md", "value": "fix-bug"},
+        {"kind": "path_exists", "path": ".agents/skills/fix-bug/SKILL.md"}
+      ],
+      "expected_exit_code": 0,
+      "expected_output": ["AI workflow guard passed"],
+      "forbidden_output": []
+    },
+    {
+      "id": "documentation-rule-routing",
+      "fixture": "generated_project",
+      "command": ["python3", "scripts/check_ai_workflow.py"],
+      "assertions": [
+        {"kind": "file_contains", "path": ".agents/rules/INDEX.md", "value": "docs-maintenance.md"},
+        {"kind": "path_exists", "path": ".agents/rules/docs-maintenance.md"}
+      ],
+      "expected_exit_code": 0,
+      "expected_output": ["AI workflow guard passed"],
+      "forbidden_output": []
+    },
+    {
+      "id": "forbidden-source-split-detection",
+      "fixture": "generated_project",
+      "setup": [{"kind": "create_directory", "path": ".codex"}],
+      "command": ["python3", "scripts/check_ai_workflow.py"],
+      "assertions": [],
+      "expected_exit_code": 1,
+      "expected_output": ["forbidden AI workflow path exists"],
+      "forbidden_output": ["AI workflow guard passed"]
+    }
+  ]
+}

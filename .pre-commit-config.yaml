@@ -8,6 +8,11 @@ repos:
   # Whole-app check (matches CI typecheck job); keeps commits from landing obvious type errors.
   - repo: local
     hooks:
+      - id: harness-check
+        name: repository Harness guard
+        entry: python3 scripts/check_ai_workflow.py
+        language: system
+        pass_filenames: false
       - id: mypy
         name: mypy (app)
         entry: bash -lc 'cd apps/api && uv run mypy app'

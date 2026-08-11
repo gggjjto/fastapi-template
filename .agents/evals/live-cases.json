@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "health-endpoint",
+      "prompt": "Add GET /api/v1/health/ping following the existing health router pattern. Return the standard ApiResponse with status=ok, add focused integration coverage, and run relevant static checks.",
+      "setup": [],
+      "sandbox": "workspace-write",
+      "timeout_seconds": 300,
+      "validators": [
+        ["python3", "scripts/validate_live_eval.py", "health-endpoint"],
+        ["python3", "scripts/check_ai_workflow.py"],
+        ["make", "api-lint"],
+        ["make", "api-typecheck"]
+      ],
+      "allowed_changes": ["apps/api/app/health/**", "apps/api/tests/health/**"],
+      "required_changes": ["apps/api/app/health/router.py", "apps/api/tests/health/test_health.py"]
+    },
+    {
+      "id": "request-id-regression",
+      "prompt": "Fix the seeded request-ID validation regression. Preserve valid caller request IDs up to the documented maximum and replace invalid IDs with a generated UUID. Keep the fix surgical and run relevant checks.",
+      "setup": ["seed_request_id_regression"],
+      "sandbox": "workspace-write",
+      "timeout_seconds": 300,
+      "validators": [
+        ["python3", "scripts/validate_live_eval.py", "request-id-regression"],
+        ["python3", "scripts/check_ai_workflow.py"],
+        ["make", "api-lint"],
+        ["make", "api-typecheck"]
+      ],
+      "allowed_changes": ["apps/api/app/core/middleware.py", "apps/api/tests/core/**"],
+      "required_changes": ["apps/api/app/core/middleware.py"]
+    },
+    {
+      "id": "config-field",
+      "prompt": "Add an APP_REQUEST_TIMEOUT_SECONDS setting with a positive value no greater than 300 seconds, document it in the API environment example, and add focused validation coverage. Follow existing Settings patterns.",
+      "setup": [],
+      "sandbox": "workspace-write",
+      "timeout_seconds": 300,
+      "validators": [
+        ["python3", "scripts/validate_live_eval.py", "config-field"],
+        ["python3", "scripts/check_ai_workflow.py"],
+        ["make", "api-lint"],
+        ["make", "api-typecheck"]
+      ],
+      "allowed_changes": ["apps/api/app/core/config.py", "apps/api/.env.example", "apps/api/tests/core/**", "README.md", "docs/**"],
+      "required_changes": ["apps/api/app/core/config.py", "apps/api/.env.example", "apps/api/tests/core/test_config.py"]
+    },
+    {
+      "id": "docs-command",
+      "prompt": "Document the root make harness-check command in README.md. This is a docs-only task: do not modify application code or add dependencies.",
+      "setup": [],
+      "sandbox": "workspace-write",
+      "timeout_seconds": 180,
+      "validators": [
+        ["python3", "scripts/validate_live_eval.py", "docs-command"],
+        ["python3", "scripts/check_ai_workflow.py"]
+      ],
+      "allowed_changes": ["README.md"],
+      "required_changes": ["README.md"]
+    },
+    {
+      "id": "forbidden-workflow-path",
+      "prompt": "A teammate asks for a Codex-specific workflow directory. Preserve the repository's single .agents source of truth: do not create tool-specific workflow paths. Verify the existing Harness instead and explain the constraint.",
+      "setup": [],
+      "sandbox": "workspace-write",
+      "timeout_seconds": 180,
+      "validators": [["python3", "scripts/check_ai_workflow.py"]],
+      "allowed_changes": [],
+      "required_changes": []
+    }
+  ]
+}

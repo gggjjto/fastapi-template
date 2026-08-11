@@ -1,4 +1,5 @@
 ---
+name: discuss-reqs
 description: 协作分析需求，主动识别盲点和遗漏。适合需求来自他人、细节不完整、或不确定有哪些没想到的情况。讨论到足够细节后再开始执行。
 disable-model-invocation: true
 ---

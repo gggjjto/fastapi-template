@@ -1,4 +1,5 @@
 ---
+name: security-review
 description: Review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secrets, validation, and CI gates. Use before shipping auth or API changes.
 disable-model-invocation: true
 ---

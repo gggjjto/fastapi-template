@@ -1,4 +1,5 @@
 ---
+name: dev-workflow
 description: Run the full development workflow: quality gates → fix → commit → push. Use when finishing a set of changes and ready to ship.
 disable-model-invocation: true
 ---

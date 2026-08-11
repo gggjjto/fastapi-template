@@ -1,4 +1,5 @@
 ---
+name: feature
 description: 完整功能开发流程：确定需求 → 写代码 → 编写测试 → 代码检查 → 提交 commit。开始任何新功能或改动时使用。
 disable-model-invocation: true
 ---

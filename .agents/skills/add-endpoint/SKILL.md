@@ -1,4 +1,5 @@
 ---
+name: add-endpoint
 description: Add or change an API endpoint in an existing domain. Use when a new route or modification to an existing route is needed.
 disable-model-invocation: true
 ---

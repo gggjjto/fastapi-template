@@ -45,6 +45,7 @@ TEXT_SUFFIXES = {
 }
 
 WORKSPACE_SUPPORT_PATHS = [
+    ".agents",
     ".github",
     ".gitignore",
     ".pre-commit-config.yaml",
@@ -52,7 +53,9 @@ WORKSPACE_SUPPORT_PATHS = [
     "LICENSE",
     "Makefile",
     "README.md",
+    "skills-lock.json",
     "docs/conventions",
+    "docs/harness-engineering.md",
     "docs/recipes",
     "scripts",
 ]

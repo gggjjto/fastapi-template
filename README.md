@@ -66,6 +66,9 @@ Check local prerequisites:
 ```bash
 make doctor
 make doctor template=fastapi-api
+make harness-check
+# Optional: runs disposable-workspace live coding-agent evaluations
+make harness-eval
 ```
 
 Create a copy of the template with project naming applied:

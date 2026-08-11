@@ -1,7 +1,8 @@
 .PHONY: help doctor create-project install dev lint typecheck test build web-dev \
         web-lint web-typecheck web-build api-install api-dev api-lint api-lint-fix api-format \
         api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
-        api-test-down api-migrate api-revision api-docker-build api-docker-run clean
+        api-test-down api-migrate api-revision api-docker-build api-docker-run harness-check \
+        harness-eval clean
 
 help:
 	@echo "Available workspace targets:"
@@ -25,6 +26,8 @@ help:
 	@echo "  api-format-check    Check API formatting"
 	@echo "  api-typecheck       Run API mypy"
 	@echo "  api-check-ai        Guard .agents as the AI workflow source of truth"
+	@echo "  harness-check       Run the deterministic repository Harness guard"
+	@echo "  harness-eval        Run optional live coding-agent evaluations"
 	@echo "  api-test            Run API pytest (requires api-test-up services)"
 	@echo "  api-cov             Run API pytest with coverage"
 	@echo "  api-ci              Run API CI checks locally"
@@ -95,6 +98,13 @@ api-typecheck:
 
 api-check-ai:
 	$(MAKE) -C apps/api check-ai
+
+harness-check:
+	python3 scripts/check_ai_workflow.py
+	python3 scripts/run_harness_evals.py
+
+harness-eval:
+	python3 scripts/eval_ai_workflow.py
 
 api-test:
 	$(MAKE) -C apps/api test

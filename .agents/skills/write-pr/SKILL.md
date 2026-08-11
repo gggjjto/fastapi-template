@@ -1,4 +1,5 @@
 ---
+name: write-pr
 description: 根据当前分支的 git diff 和 commit 自动生成 PR 描述。在所有质量门控通过后、推送前使用。
 disable-model-invocation: true
 ---

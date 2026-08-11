@@ -1,4 +1,5 @@
 ---
+name: refactor
 description: Safe refactoring workflow. Use when restructuring existing code without changing behavior — establishes a test baseline before changes and verifies it holds after.
 disable-model-invocation: true
 ---

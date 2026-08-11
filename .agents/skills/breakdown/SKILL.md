@@ -1,4 +1,5 @@
 ---
+name: breakdown
 description: 把大需求拆解成有序的小 PR。在 /discuss-reqs 确认规格后、/feature 开始前使用。
 disable-model-invocation: true
 ---

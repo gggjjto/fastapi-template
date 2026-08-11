@@ -1,216 +1,97 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents when working with code in this repository.
+Repository map and completion contract for coding agents. Detailed workflows and
+rules live under [`.agents/`](.agents/README.md); keep this file concise.
+
+## Start here
+
+```bash
+pnpm install
+cd apps/api && uv sync --dev && cp .env.example .env
+```
+
+Use `make doctor` to check local prerequisites. PostgreSQL and Redis are required
+for API integration tests; start them with `make api-test-up`.
 
 ## Commands
 
 ```bash
-# Setup
-pnpm install
-cd apps/api
-uv venv && source .venv/bin/activate
-uv sync --dev
-cp .env.example .env
+# Whole workspace
+make dev
+make lint
+make typecheck
+make test
+make build
 
-# Workspace development
-make dev              # Turbo dev for API + web
-make lint             # Turbo lint across workspace
-make typecheck        # Turbo typecheck across workspace
-make test             # Turbo test (API tests require make api-test-up)
-make build            # Turbo build across workspace
-make web-dev          # Next.js dev server
-make web-lint         # Web ESLint
-make web-typecheck    # Web TypeScript check
-make web-build        # Web production build
+# Backend
+make api-dev
+make api-lint
+make api-format-check
+make api-typecheck
+make api-test
+make api-ci
+make api-check-ai
 
-# API development
-make api-dev          # uvicorn with --reload
-make api-lint         # ruff check
-make api-lint-fix     # ruff check --fix (auto-fix)
-make api-format       # ruff format
-make api-typecheck    # mypy app
-make api-test         # pytest (all tests)
-make api-cov          # pytest with coverage report
-make api-ci           # lint + format-check + typecheck + cov (mirrors CI)
+# Frontend
+make web-dev
+make web-lint
+make web-typecheck
+make web-build
 
-# Run a single test
-cd apps/api && uv run pytest tests/users/test_users.py::test_get_user_by_id -v
-
-# Database migrations (PostgreSQL workflow)
-make api-migrate                      # alembic upgrade head
-make api-revision m="describe change" # autogenerate migration (files named YYYY-MM-DD_slug.py)
-
-# Background worker / scheduled tasks (requires Redis)
-cd apps/api && uv run arq app.worker.WorkerSettings
-
-# Test containers
-make api-test-up      # start PostgreSQL (5433) + Redis (6380) for tests
-make api-test-down    # stop and remove test containers
-
-# Full local stack (API + worker + PostgreSQL + Redis)
-cd apps/api && docker compose up
+# Test services and migrations
+make api-test-up
+make api-test-down
+make api-migrate
+make api-revision m="describe change"
 ```
 
-## Architecture
+Run one API test from `apps/api` with
+`uv run pytest tests/path/test_file.py::test_name -v`.
 
-The backend lives in `apps/api` and follows a **domain-oriented** structure: each feature domain owns all its artefacts instead of grouping by layer.
+## Architecture map
 
-```
-apps/api/app/
-├── auth/                # JWT auth domain
-│   ├── router.py        # POST /auth/token, /auth/refresh, /auth/logout, /auth/logout-all, GET /auth/me
-│   ├── schemas.py       # LoginRequest, RefreshRequest, TokenResponse, MessageResponse
-│   ├── models.py        # AuthSession + RBAC models (Role, Permission, UserRole, RolePermission)
-│   ├── security.py      # hash_password, verify_password, create/decode tokens, hash_refresh_token
-│   ├── repository.py    # AuthSessionRepository + RbacRepository (permission resolution, role assignment)
-│   ├── seed.py          # ensure_default_rbac() — idempotent permission/role seeding at startup
-│   ├── service.py       # AuthService (login, refresh+rotation, logout, logout_all)
-│   ├── dependencies.py  # get_current_user, get_current_active_user, CurrentUser, RequirePermission
-│   ├── constants.py     # ErrorCode, Permission (roles:*), RoleName
-│   └── exceptions.py    # InvalidCredentials, InvalidToken
-├── users/               # One directory per domain
-│   ├── router.py        # HTTP handlers only — no business logic
-│   ├── schemas.py       # Pydantic DTOs (inherit from core/schemas.py CustomModel)
-│   ├── models.py        # SQLAlchemy ORM model
-│   ├── dependencies.py  # FastAPI dependencies: resource loading, guards
-│   ├── service.py       # Business logic; raises domain exceptions
-│   ├── repository.py    # All DB queries
-│   ├── constants.py     # ErrorCode class
-│   └── exceptions.py    # Domain exceptions (UserNotFound, UserEmailConflict…)
-├── health/
-│   └── router.py
-├── core/
-│   ├── config.py        # pydantic-settings; all env vars prefixed APP_
-│   ├── schemas.py       # CustomModel base (populate_by_name, from_attributes)
-│   ├── response.py      # ApiResponse[T] — unified {code, message, data, request_id} envelope (code is a string business code)
-│   ├── error_codes.py   # CommonErrorCode — cross-domain stable string error codes
-│   ├── pagination.py    # PaginationParams dependency + Page[T] generic model
-│   ├── exceptions.py    # DomainError hierarchy (carries code/status_code/message_key) + BadRequest/Unauthorized/Forbidden/NotFound/Conflict/ValidationDomain
-│   ├── error_handlers.py# Global handlers: DomainError (+ i18n message), HTTPException, validation, unhandled Exception fallback
-│   ├── i18n.py          # locale negotiation + message catalog lookup (locales/*.json)
-│   ├── openapi.py       # ErrorResponse model + error_responses() reusable OpenAPI helper
-│   ├── middleware.py    # RequestIDMiddleware (X-Request-ID header + bind request_id + http.request access log)
-│   ├── request_context.py# bind/read request_id, user_id, tenant_id via structlog contextvars
-│   ├── limiter.py       # slowapi Limiter instance + 429 handler
-│   ├── sentry.py        # init_sentry() — no-op when APP_SENTRY_DSN is empty
-│   ├── cache.py         # RedisCache helper (get/set/delete/get_or_set)
-│   ├── arq.py           # Arq pool lifecycle + ArqPool dependency alias
-│   └── logging.py       # structlog configuration + redact_sensitive processor
-├── db/
-│   ├── base.py          # DeclarativeBase with SQLAlchemy naming_convention
-│   ├── session.py       # Engine, DBSession type alias, init_db/reset_db
-│   └── redis.py         # Redis connection lifecycle + RedisClient dependency alias
-├── router.py            # Top-level APIRouter; composes all domain routers under /api/v1
-├── main.py              # create_app() factory; lifespan; middleware stack
-└── worker.py            # Arq WorkerSettings + queue and cron task definitions
-```
+- `apps/api/app/` — domain-oriented FastAPI application. Routers handle HTTP,
+  services own business logic, and repositories own persistence.
+- `apps/api/tests/` — integration tests using the real app, PostgreSQL, and Redis.
+- `apps/web/` — Next.js workspace console.
+- `templates/` and `scripts/create_project.py` — generated-project contract.
+- [`docs/conventions/backend-template.md`](docs/conventions/backend-template.md) —
+  backend structure, optional services, and detailed conventions.
+- [`docs/harness-engineering.md`](docs/harness-engineering.md) — agent Harness
+  architecture, ownership, quality status, and promotion triggers.
 
-### Key conventions
+## Workflow routing
 
-- **Python version**: Requires Python ≥3.12. The codebase uses PEP 695 generic class syntax (`class ApiResponse[T]`, `class Page[T]`).
-- **Future annotations**: Every module starts with `from __future__ import annotations` to defer annotation evaluation.
-- **Pagination**: List endpoints inject `Pagination` (a `PaginationParams` dependency alias from `app.core.pagination`) and return `Page[T]` as the `data` field. `Page` carries `items`, `total`, `limit`, and `offset`.
-- **DB session**: Use `DBSession` type alias from `app.db.session`. Injected per-request via `get_db_session()`.
-- **Redis client**: Use `RedisClient` type alias from `app.db.redis`. Only available when `APP_REDIS_URL` is set.
-- **Task queue**: Use `ArqPool` type alias from `app.core.arq` to enqueue jobs. Enqueue: `await queue.enqueue_job("task_name", arg)`. New task functions must also be registered in `WorkerSettings.functions` in `app/worker.py`.
-- **Scheduled tasks**: Use Arq cron jobs in `WorkerSettings.cron_jobs`; register the same function in `WorkerSettings.functions`, keep the worker as a separate process/container, and document the intended timezone when adding real business schedules.
-- **Middleware order**: `add_middleware()` calls are LIFO — the last-added middleware wraps outermost (first to handle requests). Current order: GZip (outermost) → RequestID → CORS (innermost).
+`.agents/` is the repository-local source of truth:
 
-### Optional services
+- [`.agents/README.md`](.agents/README.md) indexes skills and workflow ownership.
+- [`.agents/rules/INDEX.md`](.agents/rules/INDEX.md) indexes reusable rules.
+- [`.agents/requirements.md`](.agents/requirements.md) contains active requirements
+  only; Git history and durable design documents archive completed work.
+- [`.agents/requirements/INDEX.md`](.agents/requirements/INDEX.md) indexes deeper
+  requirement notes.
+- `.agents/skills/<name>/SKILL.md` contains on-demand workflows. Load the relevant
+  skill before following it.
 
-Both Redis and Sentry are opt-in via env vars. The app starts and runs normally without them.
+Use the smallest workflow that fits the task. Prefer existing patterns and
+dependencies; avoid speculative layers. Install community skills only through the
+process documented in `.agents/README.md` so `skills-lock.json` stays authoritative.
 
+## Invariants
 
-| Feature    | Enable via                   | What it unlocks                                                  |
-| ---------- | ---------------------------- | ---------------------------------------------------------------- |
-| Redis      | `APP_REDIS_URL=redis://...`  | `RedisClient`, `RedisCache`, `ArqPool`                           |
-| Task queue / scheduled jobs | `APP_REDIS_URL=redis://...`  | `ArqPool` dependency, run `cd apps/api && uv run arq app.worker.WorkerSettings`; cron jobs live in `WorkerSettings.cron_jobs` |
-| Sentry     | `APP_SENTRY_DSN=https://...` | Error tracking; ERROR-level structlog events auto-reported       |
+- Python requires 3.12 or newer and modules use future annotations.
+- API DTOs inherit from `CustomModel`; list endpoints use `Page[T]`.
+- Inject `DBSession`, `RedisClient`, and `ArqPool` through existing aliases.
+- Register every Arq task in `WorkerSettings.functions`.
+- Keep optional Redis and Sentry behavior environment-controlled.
+- Preserve middleware order intentionally; FastAPI middleware registration is LIFO.
+- Never add tool-specific AI workflow directories or copy `.omx` runtime state.
+- Update documentation when setup, APIs, configuration, tests, CI, security, or the
+  Harness contract changes.
 
+## Completion contract
 
-> **Note**: `redis` is pinned to `<6` because `arq <=0.28` does not support redis 6/7. Do not bump this until arq releases support.
-
-### Testing
-
-Tests are **integration tests** and depend on real PostgreSQL + Redis. Start deps with `make api-test-up` from the repository root (uses `apps/api/docker-compose.test.yml`, ports 5433/6380, tmpfs storage).
-
-- `httpx.AsyncClient` + `ASGITransport` drives the real app; `asgi-lifespan.LifespanManager` triggers startup/shutdown so `RedisClient` and `ArqPool` are really initialised.
-- `conftest.py` sets `APP_ENV=test`, `APP_DATABASE_URL` (PG), `APP_REDIS_URL` via `os.environ.setdefault` before importing the app.
-- An autouse fixture `_reset_state` runs before every test: `reset_db()` (drop_all + create_all) and `FLUSHDB`.
-- Session-scoped event loop via `asyncio_default_fixture_loop_scope = "session"` — required because module-level `engine` / Redis pools bind to the first loop.
-- Use `app.dependency_overrides` to swap dependencies rather than monkeypatching internals.
-- Only `app/core/sentry.py` is excluded from coverage (needs live DSN).
-
-Test files mirror the domain structure under `tests/`:
-
-```
-apps/api/tests/
-├── conftest.py
-├── auth/
-│   └── test_auth.py
-├── core/
-│   ├── test_cache.py
-│   ├── test_middleware.py
-│   └── test_tasks.py
-├── health/
-│   └── test_health.py
-└── users/
-    └── test_users.py
-```
-
-## Commands and Skills
-
-`.agents/` is the single source of truth for AI development rules in this
-repository. Use `.agents/skills/` for workflows and community skills,
-`.agents/rules/` (and `.agents/rules/INDEX.md`) for reusable project rules,
-and `.agents/requirements.md` plus `.agents/requirements/` for active requirements
-and workflow notes.
-
-Development workflows are available as skills in `.agents/skills/`:
-
-- `/feature` — complete development workflow: confirm requirements → write code → write tests → quality gates → commit.
-- `/refactor` — safe refactoring: establish test baseline → make surgical changes → verify behavior unchanged → commit.
-- `/fastapi-best-practices` — apply conventions when scaffolding domains, reviewing architecture, or adding endpoints.
-- `/dev-workflow` — run quality gates (ruff + mypy), fix errors, write conventional commits, and push.
-- `/add-domain` — scaffold a new domain with router/service/repository/schema/model/test flow.
-- `/add-endpoint` — add or change an endpoint in an existing domain.
-- `/fix-bug` — reproduce, add a failing test when appropriate, fix, and verify.
-- `/db-change` — update ORM models, migrations, repository/service/tests, and docs.
-- `/security-review` — review auth, authorization, JWT, CORS, rate limiting, OpenAPI exposure, secrets, validation, and CI gates.
-- `/ship-change` — run documentation/security/test review and quality gates before handoff or commit.
-- `/karpathy-guidelines` — apply before writing new code: surface assumptions, keep changes surgical, avoid speculative features.
-- `/gather-reqs` — gather and record feature requirements before coding: structured questions → confirmed spec → saved to requirements log.
-- `/discuss-reqs` — collaborative requirements analysis: proactively surface blind spots, edge cases, and missing details through iterative discussion before coding.
-- `/breakdown` — decompose a large feature into ordered, reviewable PRs with explicit layer dependencies.
-- `/write-tests` — write or improve integration tests for existing code: gap analysis → tests → run.
-- `/write-pr` — generate a filled PR description from the current branch diff and commit history.
-- `/upgrade-deps` — safely upgrade a dependency: changelog analysis → version bump → test validation.
-- `/devops-deployment` — guide CI/CD, Docker, Kubernetes, Terraform, and release strategy work.
-- `/deployment-pipeline` — plan staging/production deployment gates, health checks, canary rollout, and rollback procedures.
-- `/observability-engineer` — design monitoring, logging, tracing, SLI/SLOs, alerts, and incident-response workflows.
-- `/incident-response` — triage production incidents, draft status updates, track mitigation, and write blameless postmortems.
-- `/backup-disaster-recovery` — plan backup, restore, RTO/RPO, disaster recovery, and failover procedures.
-- `/vulnerability-scanning` — add dependency, container, code, and infrastructure vulnerability scanning workflows.
-- `/agent-builder` — design and implement AI agents, capabilities, context handling, tools, and subagent patterns.
-- `/agent-orchestration` — design agent loops, multi-agent coordination, supervisor routing, framework selection, and result synthesis.
-
-Documentation maintenance rules live in `.agents/rules/docs-maintenance.md`. Apply them before finishing any change that affects setup, APIs, configuration, tests, CI/CD, security posture, or AI workflow.
-
-### Community skill management
-
-Use `npx skills` to manage community skills. Install project skills with
-`--agent codex --copy -y` so they land in `.agents/skills/` and are recorded in
-`skills-lock.json`.
-
-```bash
-npx skills find fastapi
-npx skills find observability monitoring sre incident runbook
-npx skills find agent development agent builder agent framework
-npx skills add fastapi/fastapi --list
-npx skills use fastapi/fastapi@fastapi --skill fastapi
-npx skills add fastapi/fastapi --skill fastapi --agent codex --copy -y
-npx skills list --json
-npx skills update -y
-```
-
-Do not use `--agent "*"`, because it creates many tool-specific directories.
+Before reporting completion, run the smallest targeted test that proves the change,
+then the affected lint/type/build gates. Harness or generator changes must pass
+`make harness-check` and the template tests. If full integration tests cannot run,
+state the missing service and report the next-best checks; never claim an unrun gate.

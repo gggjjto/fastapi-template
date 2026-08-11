@@ -1,4 +1,5 @@
 ---
+name: ship-change
 description: Finish a set of changes before commit, PR, or handoff. Runs docs review, security review, test review, and quality gates.
 disable-model-invocation: true
 ---

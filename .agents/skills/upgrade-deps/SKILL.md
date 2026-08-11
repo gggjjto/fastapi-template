@@ -1,4 +1,5 @@
 ---
+name: upgrade-deps
 description: 安全升级项目依赖。处理版本检查、约束确认、breaking change 分析、测试验证的完整流程。
 disable-model-invocation: true
 ---

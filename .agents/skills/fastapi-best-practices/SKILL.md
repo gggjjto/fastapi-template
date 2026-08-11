@@ -1,4 +1,5 @@
 ---
+name: fastapi-best-practices
 description: Review or apply production-grade FastAPI conventions. Use when scaffolding domains, reviewing architecture, choosing async vs sync, or checking endpoint patterns.
 disable-model-invocation: true
 ---

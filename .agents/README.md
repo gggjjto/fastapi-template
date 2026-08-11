@@ -70,3 +70,18 @@ The currently recorded community skills are tracked in `../skills-lock.json`:
 
 Review every community skill before using it. Skills run with the same filesystem
 and tool permissions as the active agent.
+
+## First-party Workflows
+
+Use these project-owned workflows for routine delivery; each entry maps directly to
+`.agents/skills/<name>/SKILL.md`:
+
+- `feature`, `fix-bug`, `refactor`, `ship-change` — end-to-end change workflows.
+- `add-domain`, `add-endpoint`, `db-change`, `write-tests` — scoped implementation.
+- `gather-reqs`, `discuss-reqs`, `breakdown` — requirement discovery and planning.
+- `dev-workflow`, `write-pr`, `upgrade-deps` — quality, release, and maintenance.
+- `fastapi-best-practices`, `security-review`, `karpathy-guidelines`,
+  `ddia-architecture-review` — focused checks.
+
+The remaining skill directories are community-owned and recorded in
+`skills-lock.json`; do not maintain a second package list here.

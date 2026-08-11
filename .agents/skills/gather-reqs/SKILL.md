@@ -1,4 +1,5 @@
 ---
+name: gather-reqs
 description: Gather and record feature requirements before coding. Use at the start of any new feature or significant change to surface ambiguities early and save a structured record.
 disable-model-invocation: true
 ---
