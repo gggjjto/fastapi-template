@@ -6,7 +6,7 @@ const tracks = [
 ];
 
 const checks = [
-  ["API quality", "100 tests", "91% coverage"],
+  ["API quality", "Integration tests", "Coverage gate"],
   ["Web quality", "ESLint", "TypeScript"],
   ["Generator", "Manifest", "Smoke test"],
   ["Workspace", "pnpm", "Turborepo"],
@@ -84,17 +84,17 @@ export default function Home() {
           <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
             <div className="border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-white/5">
               <p className="font-mono text-xs uppercase text-black/50 dark:text-white/50">
-                next batches
+                extension points
               </p>
               <div className="mt-5 grid gap-3">
-                {["shared config package", "typed API client", "doctor profiles"].map((item) => (
+                {["domain modules", "typed API client", "deployment profiles"].map((item) => (
                   <div
                     key={item}
                     className="flex items-center justify-between border border-black/10 px-3 py-3 text-sm dark:border-white/10"
                   >
                     <span>{item}</span>
                     <span className="font-mono text-xs text-black/45 dark:text-white/45">
-                      queued
+                      optional
                     </span>
                   </div>
                 ))}
