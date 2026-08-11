@@ -32,6 +32,7 @@ Run API or web independently when you only need one side:
 ```bash
 make api-dev
 make api-worker  # requires HATCHET_CLIENT_TOKEN
+make api-crawler-dispatcher  # requires HATCHET_CLIENT_TOKEN
 make web-dev
 ```
 

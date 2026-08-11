@@ -96,10 +96,34 @@ def test_create_worker_registers_example_task_with_expected_capacity(
         {
             "name": "fastapi-template-worker",
             "slots": 10,
-            "workflows": [worker_module.example_task],
+            "workflows": [worker_module.example_task, worker_module.crawl_task],
             "kwargs": {},
         }
     ]
+
+
+def test_crawl_task_uses_expected_hatchet_policy() -> None:
+    from app.crawler.runner import create_crawl_task
+    from app.crawler.schemas import CrawlTaskInput
+
+    calls: list[dict[str, Any]] = []
+
+    class RecordingHatchet:
+        def task(self, **kwargs: Any) -> Any:
+            calls.append(kwargs)
+
+            def decorator(func: Any) -> Any:
+                return func
+
+            return decorator
+
+    create_crawl_task(RecordingHatchet())  # type: ignore[arg-type]
+
+    assert calls[0]["name"] == "crawler.crawl"
+    assert calls[0]["input_validator"] is CrawlTaskInput
+    assert calls[0]["retries"] == 2
+    assert calls[0]["backoff_factor"] == 2
+    assert calls[0]["backoff_max_seconds"] == 300
 
 
 async def test_fastapi_starts_without_hatchet_client_token(

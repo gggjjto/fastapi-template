@@ -26,6 +26,7 @@ make build
 # Backend
 make api-dev
 make api-worker
+make api-crawler-dispatcher
 make api-lint
 make api-format-check
 make api-typecheck
@@ -84,6 +85,7 @@ process documented in `.agents/README.md` so `skills-lock.json` stays authoritat
 - API DTOs inherit from `CustomModel`; list endpoints use `Page[T]`.
 - Inject `DBSession` and `RedisClient` through existing aliases.
 - Register every Hatchet task in `create_worker()` and keep the API independent of Hatchet credentials.
+- Add crawler business logic only under `app/crawler/handlers`; the runner owns persistence, retries, and network policy.
 - Keep optional Redis and Sentry behavior environment-controlled.
 - Preserve middleware order intentionally; FastAPI middleware registration is LIFO.
 - Never add tool-specific AI workflow directories or copy `.omx` runtime state.

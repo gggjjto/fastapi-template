@@ -99,10 +99,12 @@
       "description": "Hatchet Cloud background worker and task registration surface.",
       "files": [
         "apps/api/app/worker.py",
+        "apps/api/app/crawler",
+        "apps/api/tests/crawler",
         "apps/api/tests/core/test_tasks.py"
       ],
       "env_vars": ["HATCHET_CLIENT_TOKEN"],
-      "notes": "The API runs without a token; only the worker requires Hatchet Cloud credentials.",
+      "notes": "The API runs without a token; only the worker and crawler dispatcher require Hatchet Cloud credentials.",
       "requires": [],
       "incompatible_with": []
     },

@@ -1,4 +1,4 @@
-.PHONY: help api-install api-dev api-worker api-lint api-lint-fix api-format \
+.PHONY: help api-install api-dev api-worker api-crawler-dispatcher api-lint api-lint-fix api-format \
         api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
         api-test-down api-migrate api-revision api-docker-build api-docker-run harness-check \
         harness-eval clean
@@ -8,6 +8,7 @@ help:
 	@echo "  api-install         Install API dependencies"
 	@echo "  api-dev             Run API dev server with --reload"
 	@echo "  api-worker          Run the Hatchet Cloud worker"
+	@echo "  api-crawler-dispatcher  Dispatch pending crawler jobs to Hatchet"
 	@echo "  api-lint            Run API ruff check"
 	@echo "  api-lint-fix        Run API ruff check --fix"
 	@echo "  api-format          Run API ruff format"
@@ -35,6 +36,9 @@ api-dev:
 
 api-worker:
 	$(MAKE) -C apps/api worker
+
+api-crawler-dispatcher:
+	$(MAKE) -C apps/api crawler-dispatcher
 
 api-lint:
 	$(MAKE) -C apps/api lint

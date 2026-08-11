@@ -72,6 +72,9 @@ def test_load_template_manifest() -> None:
         "sentry",
         "worker",
     }
+    worker_option = next(option for option in manifest.options if option.id == "worker")
+    assert "apps/api/app/crawler" in worker_option.files
+    assert "crawler dispatcher require Hatchet Cloud credentials" in worker_option.notes
     assert "fastapi-api" in create_project.list_template_ids()
 
 
@@ -147,10 +150,14 @@ def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
     env_example = (target / "apps/api/.env.example").read_text(encoding="utf-8")
     assert "demo-api:local" in api_makefile
     assert "hatchet-sdk" in pyproject
+    assert "httpcore" in pyproject
+    assert "httpx" in pyproject
     assert '"arq' not in pyproject
     assert "HATCHET_CLIENT_TOKEN" in env_example
     assert "api-worker:" in root_makefile
+    assert "api-crawler-dispatcher:" in root_makefile
     assert "uv run python -m app.worker" in api_makefile
+    assert "uv run python -m app.crawler.dispatcher" in api_makefile
     assert "pnpm" not in root_makefile
     assert "scripts/run_harness_evals.py" in root_makefile
     assert "create-project:" not in root_makefile
@@ -163,6 +170,8 @@ def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
     harness_doc = (target / "docs/harness-engineering.md").read_text(encoding="utf-8")
     assert "no inherited live-evaluation status" in harness_doc
     assert (target / "scripts/create_project.py").exists()
+    assert (target / "apps/api/app/crawler/dispatcher.py").exists()
+    assert (target / "apps/api/app/crawler/http_client.py").exists()
     assert (target / "AGENTS.md").exists()
     assert (target / ".agents/README.md").exists()
     assert (target / ".agents/evals/cases.json").exists()

@@ -10,6 +10,17 @@
 name: fastapi-template-test
 
 services:
+  crawler-dispatcher:
+    profiles: ["crawler"]
+    build: .
+    environment:
+      APP_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/app_test
+      HATCHET_CLIENT_TOKEN: ${HATCHET_CLIENT_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uv run python -m app.crawler.dispatcher
+
   db:
     image: postgres:16-alpine
     environment:

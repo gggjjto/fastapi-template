@@ -10,6 +10,9 @@ from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.worker.worker import Worker
 from pydantic import BaseModel
 
+from app.crawler.registry import discover_handlers
+from app.crawler.runner import create_crawl_task
+
 logger = structlog.get_logger(__name__)
 hatchet = Hatchet()
 
@@ -37,12 +40,15 @@ example_task = hatchet.task(
     input_validator=ExampleTaskInput,
 )(_example_task)
 
+crawl_task = create_crawl_task(hatchet)
+
 
 def create_worker() -> Worker:
+    discover_handlers()
     return hatchet.worker(
         "fastapi-template-worker",
         slots=10,
-        workflows=[example_task],
+        workflows=[example_task, crawl_task],
     )
 
 

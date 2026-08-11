@@ -35,6 +35,21 @@ services:
       - .:/app          # hot-reload in dev; remove in prod image builds
     command: uv run python -m app.worker
 
+  # ── Crawler dispatcher (PostgreSQL outbox -> Hatchet Cloud) ──────────────
+  crawler-dispatcher:
+    build: .
+    env_file:
+      - .env
+    environment:
+      APP_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/app
+      APP_DB_CREATE_TABLES_ON_STARTUP: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uv run python -m app.crawler.dispatcher
+
   # ── PostgreSQL ────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine

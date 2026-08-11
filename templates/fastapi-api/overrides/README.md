@@ -19,6 +19,7 @@ cp apps/api/.env.example apps/api/.env
 make api-test-up
 make api-dev
 make api-worker  # requires HATCHET_CLIENT_TOKEN
+make api-crawler-dispatcher  # requires HATCHET_CLIENT_TOKEN
 ```
 
 Or launch the full API stack:

@@ -5,7 +5,8 @@ Use this recipe when the app mainly accepts work and processes it asynchronously
 Keep:
 
 - `app/worker.py`
-- Hatchet Cloud credentials in the worker environment
+- `app/crawler` for durable crawler jobs and business handlers
+- Hatchet Cloud credentials in the worker and crawler-dispatcher environments
 - PostgreSQL for durable job and result state
 - Health endpoints for container orchestration
 
@@ -14,12 +15,14 @@ Consider removing:
 - `app/auth` if the worker is never exposed as a user-facing API
 - `app/users` if there is no account model
 
-Add next:
+The crawler foundation already provides:
 
-- Job submission endpoints
-- Idempotency keys for externally triggered jobs
-- Retry and dead-letter conventions
-- Job status persistence if clients need progress updates
+- Internal job creation with tenant-scoped idempotency
+- Recoverable PostgreSQL-to-Hatchet dispatch
+- Retry classification and durable job status
+- A safe asynchronous HTTP client
+
+Add a public submission endpoint only when a product needs one.
 
 Verify:
 
@@ -27,4 +30,5 @@ Verify:
 make api-test-up
 make api-ci
 HATCHET_CLIENT_TOKEN=... make api-worker
+HATCHET_CLIENT_TOKEN=... make api-crawler-dispatcher
 ```

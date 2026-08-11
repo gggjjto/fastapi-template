@@ -1,4 +1,4 @@
-.PHONY: help install dev worker lint lint-fix format format-check typecheck test cov ci check-ai \
+.PHONY: help install dev worker crawler-dispatcher lint lint-fix format format-check typecheck test cov ci check-ai \
         test-up test-down migrate revision docker-build docker-run clean
 
 help:
@@ -6,6 +6,7 @@ help:
 	@echo "  install        Install dependencies (including dev)"
 	@echo "  dev            Run dev server with --reload"
 	@echo "  worker         Run the Hatchet Cloud worker"
+	@echo "  crawler-dispatcher  Dispatch pending crawler jobs to Hatchet"
 	@echo "  lint           Run ruff check"
 	@echo "  lint-fix       Run ruff check --fix"
 	@echo "  format         Run ruff format"
@@ -31,6 +32,9 @@ dev:
 
 worker:
 	uv run python -m app.worker
+
+crawler-dispatcher:
+	uv run python -m app.crawler.dispatcher
 
 lint:
 	uv run ruff check .

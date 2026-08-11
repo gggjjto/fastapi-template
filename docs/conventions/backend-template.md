@@ -25,6 +25,8 @@ workspace.
   optional for public prototypes or one-off internal tools.
 - `apps/api/app/worker.py`: Hatchet Cloud task registration and worker entry point. Keep
   it when a project needs background jobs; do not import it from the FastAPI app.
+- `apps/api/app/crawler`: crawler persistence, safe HTTP, Hatchet dispatch, and handler
+  discovery. Add site-specific business logic under `handlers/`.
 
 ## Template Rules
 
@@ -60,4 +62,5 @@ make api-test-down
 ```
 
 Run the Hatchet worker separately with `make api-worker` after setting
-`HATCHET_CLIENT_TOKEN`.
+`HATCHET_CLIENT_TOKEN`. Run the crawler outbox dispatcher with
+`make api-crawler-dispatcher`.
