@@ -4,10 +4,9 @@ Use this recipe when the app mainly accepts work and processes it asynchronously
 
 Keep:
 
-- `app/core/arq.py`
-- `app/db/redis.py`
 - `app/worker.py`
-- Redis and Arq dependencies
+- Hatchet Cloud credentials in the worker environment
+- PostgreSQL for durable job and result state
 - Health endpoints for container orchestration
 
 Consider removing:
@@ -27,6 +26,5 @@ Verify:
 ```bash
 make api-test-up
 make api-ci
-cd apps/api
-uv run arq app.worker.WorkerSettings
+HATCHET_CLIENT_TOKEN=... make api-worker
 ```

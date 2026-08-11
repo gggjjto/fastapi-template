@@ -7,7 +7,7 @@ workspace.
 ## Required Core
 
 - `apps/api/app/core`: configuration, response envelope, error handling, i18n, logging,
-  request context, rate limiting, Redis helpers, Arq lifecycle, and Sentry setup.
+  request context, rate limiting, Redis helpers, and Sentry setup.
 - `apps/api/app/db`: SQLAlchemy base, async engine/session lifecycle, and Redis client
   lifecycle.
 - `apps/api/app/health`: public health endpoint for smoke checks and deployments.
@@ -23,8 +23,8 @@ workspace.
   patterns.
 - `apps/api/app/auth`: JWT sessions and RBAC. Keep it for SaaS/API products, but make it
   optional for public prototypes or one-off internal tools.
-- `apps/api/app/worker.py`: Arq worker settings and scheduled task registration. Keep it
-  when a project needs background jobs.
+- `apps/api/app/worker.py`: Hatchet Cloud task registration and worker entry point. Keep
+  it when a project needs background jobs; do not import it from the FastAPI app.
 
 ## Template Rules
 
@@ -58,3 +58,6 @@ make api-test-up
 make api-ci
 make api-test-down
 ```
+
+Run the Hatchet worker separately with `make api-worker` after setting
+`HATCHET_CLIENT_TOKEN`.

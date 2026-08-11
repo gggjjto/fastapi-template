@@ -25,6 +25,7 @@ make build
 
 # Backend
 make api-dev
+make api-worker
 make api-lint
 make api-format-check
 make api-typecheck
@@ -81,8 +82,8 @@ process documented in `.agents/README.md` so `skills-lock.json` stays authoritat
 
 - Python requires 3.12 or newer and modules use future annotations.
 - API DTOs inherit from `CustomModel`; list endpoints use `Page[T]`.
-- Inject `DBSession`, `RedisClient`, and `ArqPool` through existing aliases.
-- Register every Arq task in `WorkerSettings.functions`.
+- Inject `DBSession` and `RedisClient` through existing aliases.
+- Register every Hatchet task in `create_worker()` and keep the API independent of Hatchet credentials.
 - Keep optional Redis and Sentry behavior environment-controlled.
 - Preserve middleware order intentionally; FastAPI middleware registration is LIFO.
 - Never add tool-specific AI workflow directories or copy `.omx` runtime state.

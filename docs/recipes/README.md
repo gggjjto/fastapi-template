@@ -9,6 +9,7 @@ not need, and keep the backend quality gate intact.
 - [API-only SaaS](api-only-saas.md)
 - [Internal Admin Backend](internal-admin-backend.md)
 - [Background Worker Service](background-worker-service.md)
+- [Hatchet Crawler](hatchet-crawler.md)
 - [AI-enabled API](ai-enabled-api.md)
 - [Data Processing API](data-processing-api.md)
 - [OpenRouter / OpenAI](openrouter-openai.md)

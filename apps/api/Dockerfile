@@ -49,6 +49,7 @@ WORKDIR /app
 
 # 从 builder 拷贝虚拟环境与项目文件
 COPY --from=builder --chown=app:app /app /app
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 
 USER app
 

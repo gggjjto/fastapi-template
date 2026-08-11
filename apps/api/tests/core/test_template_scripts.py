@@ -141,10 +141,19 @@ def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
     assert (target / "apps/api/pyproject.toml").exists()
     assert (target / "README.md").read_text(encoding="utf-8").startswith("# Demo Api")
     assert "Next.js" not in (target / "README.md").read_text(encoding="utf-8")
-    assert "demo-api:local" in (target / "apps/api/Makefile").read_text(encoding="utf-8")
-    assert "pnpm" not in (target / "Makefile").read_text(encoding="utf-8")
-    assert "scripts/run_harness_evals.py" in (target / "Makefile").read_text(encoding="utf-8")
-    assert "create-project:" not in (target / "Makefile").read_text(encoding="utf-8")
+    api_makefile = (target / "apps/api/Makefile").read_text(encoding="utf-8")
+    root_makefile = (target / "Makefile").read_text(encoding="utf-8")
+    pyproject = (target / "apps/api/pyproject.toml").read_text(encoding="utf-8")
+    env_example = (target / "apps/api/.env.example").read_text(encoding="utf-8")
+    assert "demo-api:local" in api_makefile
+    assert "hatchet-sdk" in pyproject
+    assert '"arq' not in pyproject
+    assert "HATCHET_CLIENT_TOKEN" in env_example
+    assert "api-worker:" in root_makefile
+    assert "uv run python -m app.worker" in api_makefile
+    assert "pnpm" not in root_makefile
+    assert "scripts/run_harness_evals.py" in root_makefile
+    assert "create-project:" not in root_makefile
     generated_ci = (target / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "pnpm" not in generated_ci
     assert "make harness-check" in generated_ci
@@ -455,7 +464,7 @@ def test_generator_rejects_invalid_template_option_combination(tmp_path: Path) -
             str(Path(__file__).resolve().parents[4] / "scripts" / "create_project.py"),
             "Invalid Options API",
             str(tmp_path / "invalid-options-api"),
-            "--with-worker",
+            "--with-rbac",
         ],
         capture_output=True,
         check=False,
@@ -464,7 +473,7 @@ def test_generator_rejects_invalid_template_option_combination(tmp_path: Path) -
     )
 
     assert result.returncode == 2
-    assert "--with-worker requires --with-redis" in result.stderr
+    assert "--with-rbac requires --with-auth" in result.stderr
 
 
 def test_doctor_render_results() -> None:

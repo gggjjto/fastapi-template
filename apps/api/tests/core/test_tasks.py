@@ -1,58 +1,140 @@
 """
-后台任务 / Arq 集成测试。
+后台任务 / Hatchet Worker 测试。
 
-验证 worker 任务函数逻辑，以及 app lifespan 能正确初始化 Arq pool 并支持入队。
+验证任务纯逻辑、Pydantic 输入输出，以及 worker 注册合约。
 """
 
 from __future__ import annotations
 
-from httpx import AsyncClient
+import importlib
+from typing import Any
 
-from app.core.arq import get_arq
-from app.worker import WorkerSettings, example_task, scheduled_maintenance_task
-
-
-async def test_example_task_returns_expected_message() -> None:
-    ctx = {"job_id": "job-123"}
-
-    result = await example_task(ctx, "hello")
-
-    assert "hello" in result
+import pytest
+from asgi_lifespan import LifespanManager
+from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
 
 
-async def test_scheduled_maintenance_task_returns_expected_message() -> None:
-    ctx = {"job_id": "cron-123"}
-
-    result = await scheduled_maintenance_task(ctx)
-
-    assert result == "scheduled maintenance completed"
+@pytest.fixture(autouse=True)
+def _reset_state() -> None:
+    return None
 
 
-def test_worker_registers_scheduled_maintenance_cron_job() -> None:
-    cron_job = WorkerSettings.cron_jobs[0]
+def _load_worker_module(monkeypatch: pytest.MonkeyPatch) -> Any:
+    monkeypatch.setenv(
+        "HATCHET_CLIENT_TOKEN",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJzdWIiOiJ0ZW5hbnQtdGVzdCIsInNlcnZlcl91cmwiOiJodHRwOi8vbG9j"
+        "YWxob3N0Ojg4ODgiLCJncnBjX2Jyb2FkY2FzdF9hZGRyZXNzIjoibG9j"
+        "YWxob3N0OjcwNzAifQ."
+        "signature",
+    )
+    import app.worker as worker_module
 
-    assert scheduled_maintenance_task in WorkerSettings.functions
-    assert cron_job.name == "scheduled_maintenance_daily"
-    assert cron_job.coroutine is scheduled_maintenance_task
-    assert cron_job.hour == 3
-    assert cron_job.minute == 0
-    assert cron_job.second == 0
-    assert cron_job.unique is True
-    assert cron_job.timeout_s == 300
-    assert cron_job.max_tries == 3
+    return importlib.reload(worker_module)
 
 
-async def test_arq_pool_initialized_in_lifespan(client: AsyncClient) -> None:
-    """
-    只要 client fixture 走过 lifespan，`get_arq()` 就应返回 pool 而不抛异常。
-    """
-    pool = await get_arq()
+def test_example_task_input_requires_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    worker_module = _load_worker_module(monkeypatch)
 
-    assert pool is not None
-    # 入队一个任务（不启动 worker，仅验证连接可用 + 协议正常）
-    job = await pool.enqueue_job("example_task", "ping")
-    assert job is not None
+    with pytest.raises(ValidationError):
+        worker_module.ExampleTaskInput()
 
-    job_info = await job.info()
-    assert job_info is not None
-    assert job_info.function == "example_task"
+
+def test_example_task_input_serializes_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    worker_module = _load_worker_module(monkeypatch)
+
+    task_input = worker_module.ExampleTaskInput(message="hello")
+
+    assert task_input.model_dump() == {"message": "hello"}
+
+
+async def test_run_example_task_returns_transformed_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    worker_module = _load_worker_module(monkeypatch)
+
+    result = await worker_module.run_example_task(
+        worker_module.ExampleTaskInput(message="hello"),
+    )
+
+    assert result == worker_module.ExampleTaskOutput(transformed_message="HELLO")
+
+
+def test_create_worker_registers_example_task_with_expected_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    worker_module = _load_worker_module(monkeypatch)
+    created_worker = object()
+    calls: list[dict[str, Any]] = []
+
+    class RecordingHatchet:
+        def worker(
+            self,
+            name: str,
+            *,
+            slots: int | None = None,
+            workflows: list[Any] | None = None,
+            **kwargs: Any,
+        ) -> object:
+            calls.append(
+                {
+                    "name": name,
+                    "slots": slots,
+                    "workflows": workflows,
+                    "kwargs": kwargs,
+                }
+            )
+            return created_worker
+
+    monkeypatch.setattr(worker_module, "hatchet", RecordingHatchet())
+
+    result = worker_module.create_worker()
+
+    assert result is created_worker
+    assert calls == [
+        {
+            "name": "fastapi-template-worker",
+            "slots": 10,
+            "workflows": [worker_module.example_task],
+            "kwargs": {},
+        }
+    ]
+
+
+async def test_fastapi_starts_without_hatchet_client_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("HATCHET_CLIENT_TOKEN", raising=False)
+
+    import app.auth.seed as seed_module
+    import app.db.session as session_module
+    import app.main as main_module
+
+    class FakeSession:
+        async def __aenter__(self) -> object:
+            return object()
+
+        async def __aexit__(self, *exc_info: object) -> None:
+            return None
+
+    async def ensure_default_rbac(_: object) -> None:
+        return None
+
+    async def close_db() -> None:
+        return None
+
+    monkeypatch.setattr(main_module.settings, "db_create_tables_on_startup", False)
+    monkeypatch.setattr(main_module.settings, "redis_url", None)
+    monkeypatch.setattr(seed_module, "ensure_default_rbac", ensure_default_rbac)
+    monkeypatch.setattr(session_module, "AsyncSessionLocal", FakeSession)
+    monkeypatch.setattr(main_module, "close_db", close_db)
+
+    async with LifespanManager(main_module.app) as manager:
+        async with AsyncClient(
+            transport=ASGITransport(app=manager.app),
+            base_url="http://test",
+        ) as client:
+            response = await client.get("/")
+
+    assert response.status_code == 200

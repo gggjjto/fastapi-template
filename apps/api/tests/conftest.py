@@ -89,8 +89,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     """
     带 lifespan 的 httpx AsyncClient。
 
-    进入时触发 app 的 startup（init_redis / init_arq），
-    退出时触发 shutdown（close_redis / close_arq / close_db）。
+    进入时触发 app 的 startup（init_redis），
+    退出时触发 shutdown（close_redis / close_db）。
     """
     async with LifespanManager(_FreshRequestState(app)) as manager:
         async with AsyncClient(

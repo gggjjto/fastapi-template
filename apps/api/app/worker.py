@@ -1,65 +1,54 @@
-"""
-Arq 后台任务 Worker。
+"""Hatchet Cloud worker entry point.
 
-本地启动 Worker：
-    uv run arq app.worker.WorkerSettings
-
-生产环境中作为独立进程（或独立容器）与 API 服务并行运行。
-每个任务函数的第一个参数 ctx 由 Arq 注入，包含 redis、job_id 等信息。
-周期性任务通过 WorkerSettings.cron_jobs 注册；实际执行时间取决于 Worker 进程时区。
+Start locally with ``uv run python -m app.worker``.
 """
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import structlog
-from arq import cron
-from arq.connections import RedisSettings
-
-from app.core.config import get_settings
+from hatchet_sdk import Context, Hatchet
+from hatchet_sdk.worker.worker import Worker
+from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+hatchet = Hatchet()
 
 
-# ── 任务定义 ──────────────────────────────────────────────────────────────────
-# 在此添加任务函数，并在 WorkerSettings.functions 中注册。
-# 在路由或服务中入队：await queue.enqueue_job("任务函数名", 参数...)
+class ExampleTaskInput(BaseModel):
+    message: str
 
 
-async def example_task(ctx: dict, message: str) -> str:
-    """示例任务，替换为真实业务逻辑。"""
-    logger.info("worker.example_task", message=message, job_id=ctx["job_id"])
-    return f"已处理：{message}"
+class ExampleTaskOutput(BaseModel):
+    transformed_message: str
 
 
-async def scheduled_maintenance_task(ctx: dict) -> str:
-    """周期任务示例，用于放置每日清理、同步、统计预聚合等逻辑。"""
-    logger.info("worker.scheduled_maintenance_task", job_id=ctx["job_id"])
-    return "scheduled maintenance completed"
+async def run_example_task(task_input: ExampleTaskInput) -> ExampleTaskOutput:
+    """Pure example logic that can be tested without a Hatchet worker."""
+    return ExampleTaskOutput(transformed_message=task_input.message.upper())
 
 
-# ── Worker 配置 ───────────────────────────────────────────────────────────────
+async def _example_task(task_input: ExampleTaskInput, _context: Context) -> ExampleTaskOutput:
+    logger.info("worker.example_task")
+    return await run_example_task(task_input)
 
 
-class WorkerSettings:
-    functions: ClassVar = [example_task, scheduled_maintenance_task]
-    cron_jobs: ClassVar = [
-        cron(
-            scheduled_maintenance_task,
-            name="scheduled_maintenance_daily",
-            hour=3,
-            minute=0,
-            second=0,
-            unique=True,
-            timeout=300,
-            max_tries=3,
-        )
-    ]
-    redis_settings = RedisSettings.from_dsn(settings.redis_url)  # type: ignore[arg-type]
-    max_jobs = 10
-    job_timeout = 300  # 单个任务超时时间（秒），超时后标记为失败
-    keep_result = 3_600  # 任务结果在 Redis 中保留时间（秒）
-    retry_jobs = True
-    max_tries = 3
+example_task = hatchet.task(
+    name="example-task",
+    input_validator=ExampleTaskInput,
+)(_example_task)
+
+
+def create_worker() -> Worker:
+    return hatchet.worker(
+        "fastapi-template-worker",
+        slots=10,
+        workflows=[example_task],
+    )
+
+
+def main() -> None:
+    create_worker().start()
+
+
+if __name__ == "__main__":
+    main()

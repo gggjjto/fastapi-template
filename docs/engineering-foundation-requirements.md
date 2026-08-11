@@ -7,7 +7,7 @@
 
 ## 1. Background
 
-The project is a domain-oriented FastAPI backend template with existing support for unified responses, JWT authentication, SQLAlchemy, Alembic, Redis, Arq, structlog, Sentry, rate limiting, integration tests, Docker, and GitHub Actions.
+The project is a domain-oriented FastAPI backend template with existing support for unified responses, JWT authentication, SQLAlchemy, Alembic, Redis, Hatchet Cloud workers, structlog, Sentry, rate limiting, integration tests, Docker, and GitHub Actions.
 
 The next goal is to evolve the template into a production-ready foundation for long-lived SaaS and large internet-style backend projects. This work focuses on infrastructure and architecture capabilities rather than business features.
 

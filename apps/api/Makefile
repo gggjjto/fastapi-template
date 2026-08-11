@@ -1,10 +1,11 @@
-.PHONY: help install dev lint lint-fix format format-check typecheck test cov ci check-ai \
+.PHONY: help install dev worker lint lint-fix format format-check typecheck test cov ci check-ai \
         test-up test-down migrate revision docker-build docker-run clean
 
 help:
 	@echo "Available API targets:"
 	@echo "  install        Install dependencies (including dev)"
 	@echo "  dev            Run dev server with --reload"
+	@echo "  worker         Run the Hatchet Cloud worker"
 	@echo "  lint           Run ruff check"
 	@echo "  lint-fix       Run ruff check --fix"
 	@echo "  format         Run ruff format"
@@ -27,6 +28,9 @@ install:
 
 dev:
 	uv run uvicorn app.main:app --reload
+
+worker:
+	uv run python -m app.worker
 
 lint:
 	uv run ruff check .

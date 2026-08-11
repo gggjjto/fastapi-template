@@ -6,7 +6,7 @@ and scheduled data workflows.
 Keep:
 
 - PostgreSQL and SQLAlchemy for durable state
-- Redis and Arq for queued processing
+- Hatchet Cloud for queued processing and Redis for caching
 - Structured logging and request IDs
 - Sentry for production error visibility
 

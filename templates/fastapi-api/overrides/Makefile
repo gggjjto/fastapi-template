@@ -1,4 +1,4 @@
-.PHONY: help api-install api-dev api-lint api-lint-fix api-format \
+.PHONY: help api-install api-dev api-worker api-lint api-lint-fix api-format \
         api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
         api-test-down api-migrate api-revision api-docker-build api-docker-run harness-check \
         harness-eval clean
@@ -7,6 +7,7 @@ help:
 	@echo "Available API template targets:"
 	@echo "  api-install         Install API dependencies"
 	@echo "  api-dev             Run API dev server with --reload"
+	@echo "  api-worker          Run the Hatchet Cloud worker"
 	@echo "  api-lint            Run API ruff check"
 	@echo "  api-lint-fix        Run API ruff check --fix"
 	@echo "  api-format          Run API ruff format"
@@ -31,6 +32,9 @@ api-install:
 
 api-dev:
 	$(MAKE) -C apps/api dev
+
+api-worker:
+	$(MAKE) -C apps/api worker
 
 api-lint:
 	$(MAKE) -C apps/api lint

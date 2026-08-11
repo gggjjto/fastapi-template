@@ -26,7 +26,7 @@
 - FastAPI + Pydantic v2。
 - SQLAlchemy async + Alembic。
 - JWT access / refresh token。
-- Redis 缓存与 Arq 后台任务队列基础。
+- Redis 缓存与 Hatchet Cloud 后台任务基础。
 - 统一响应体。
 - 全局 HTTP 与参数校验异常处理。
 - 结构化日志与 Request ID。
@@ -156,7 +156,7 @@ FastAPI application
 - `auth`、`users`、`health` 领域。
 - `router/service/repository/model/schema` 分层。
 - JWT 基础鉴权。
-- Arq worker 基础。
+- Hatchet worker 基础。
 - `/api/v1` 路由前缀。
 
 待补齐：
@@ -182,7 +182,7 @@ FastAPI application
 
 - PostgreSQL。
 - Redis。
-- Arq queue。
+- Hatchet Cloud 任务编排。
 - Alembic migration。
 - Object storage。
 - Backup and restore。
@@ -197,7 +197,7 @@ FastAPI application
 - PostgreSQL 测试栈。
 - Redis 连接管理。
 - RedisCache。
-- Arq。
+- Hatchet Cloud worker。
 
 待补齐：
 
@@ -342,8 +342,8 @@ FastAPI application
 
 现状：
 
-- Arq 基建存在。
-- `docker-compose.yml` 中 worker 默认注释。
+- Hatchet Cloud worker 基建存在。
+- `docker-compose.yml` 提供独立 worker 服务。
 - 业务任务可靠性策略尚未固化。
 
 风险：
@@ -506,7 +506,7 @@ FastAPI application
 - DB pool usage。
 - DB query latency。
 - Redis latency。
-- Arq queue depth。
+- Hatchet queued runs。
 - Worker failure count。
 
 ### 6.7 安全

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [{ name = "synergy" }]
-keywords = ["fastapi", "template", "starter", "sqlalchemy", "alembic", "jwt", "redis", "arq"]
+keywords = ["fastapi", "template", "starter", "sqlalchemy", "alembic", "jwt", "redis", "hatchet"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: FastAPI",
@@ -35,10 +35,9 @@ dependencies = [
   "email-validator>=2.2.0,<3.0.0",
   "PyJWT>=2.9.0,<3.0.0",
   "bcrypt>=5.0.0,<6.0.0",
-  # redis 上限锁在 <6：arq<=0.28 仍依赖 redis<6；待 arq 发版支持 redis 6/7 后再放宽
   # redis>=4.2 已内置 asyncio 支持，无需 [asyncio] extra
   "redis>=5.0.0,<6.0.0",
-  "arq>=0.26.0,<1.0.0",
+  "hatchet-sdk>=1.37.1,<2.0.0",
   "slowapi>=0.1.9,<1.0.0",
   "sentry-sdk[fastapi]>=2.58.0,<3.0.0",
 ]
@@ -82,7 +81,7 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["app"]
 branch = true   # measure branch coverage in addition to line coverage
-# 现已由集成测试覆盖：cache.py / redis.py / arq.py / worker.py 的任务函数
+# 现已由集成测试覆盖：cache.py / redis.py / worker.py 的任务函数
 omit = [
     "app/core/sentry.py",    # 需要真实 Sentry DSN 才能覆盖
 ]
@@ -105,4 +104,3 @@ no_implicit_optional = true
 strict_optional = true
 pretty = true
 exclude = ["alembic"]
-

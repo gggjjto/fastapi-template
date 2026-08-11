@@ -9,7 +9,7 @@ templates when needed.
 
 - Domain-oriented structure for clean growth (`auth`, `users`, `core`)
 - JWT auth, RBAC, and unified API response/error contracts
-- Redis + Arq job queue and cron support
+- Redis caching plus Hatchet Cloud background tasks
 - Structured logging, request-id tracing, rate limiting
 - Ready for production hardening and CI-backed workflows
 - i18n error messages and async SQLAlchemy + Alembic setup
@@ -31,6 +31,7 @@ Run API or web independently when you only need one side:
 
 ```bash
 make api-dev
+make api-worker  # requires HATCHET_CLIENT_TOKEN
 make web-dev
 ```
 

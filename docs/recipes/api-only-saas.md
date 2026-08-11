@@ -10,7 +10,7 @@ Keep:
 - `app/core`
 - `app/db`
 - `app/worker.py`
-- PostgreSQL, Redis, Arq, Sentry, rate limiting, i18n, and request IDs
+- PostgreSQL, Redis, Hatchet Cloud, Sentry, rate limiting, i18n, and request IDs
 
 Add next:
 

@@ -39,20 +39,16 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         await ensure_default_rbac(db_session)
 
     if settings.redis_url:
-        from app.core.arq import init_arq
         from app.db.redis import init_redis
 
         await init_redis()
-        await init_arq()
         logger.info("app.redis.connected", url=settings.redis_url)
 
     yield
 
     if settings.redis_url:
-        from app.core.arq import close_arq
         from app.db.redis import close_redis
 
-        await close_arq()
         await close_redis()
 
     await close_db()

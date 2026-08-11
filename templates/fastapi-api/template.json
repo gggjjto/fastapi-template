@@ -2,7 +2,7 @@
   "id": "fastapi-api",
   "version": "0.1.0",
   "name": "FastAPI API",
-  "description": "Production-minded FastAPI backend with auth, RBAC, PostgreSQL, Redis, Arq, Docker, and CI-ready quality gates.",
+  "description": "Production-minded FastAPI backend with auth, RBAC, PostgreSQL, Redis, Hatchet, Docker, and CI-ready quality gates.",
   "source": "../../apps/api",
   "default_target": "apps/api",
   "required_tools": ["python>=3.12", "uv", "docker"],
@@ -96,15 +96,14 @@
     {
       "id": "worker",
       "flag": "--with-worker",
-      "description": "Arq background worker, queue dependency, and scheduled-task registration surface.",
+      "description": "Hatchet Cloud background worker and task registration surface.",
       "files": [
         "apps/api/app/worker.py",
-        "apps/api/app/core/arq.py",
         "apps/api/tests/core/test_tasks.py"
       ],
-      "env_vars": ["APP_REDIS_URL"],
-      "notes": "Requires Redis because Arq uses Redis as its broker.",
-      "requires": ["redis"],
+      "env_vars": ["HATCHET_CLIENT_TOKEN"],
+      "notes": "The API runs without a token; only the worker requires Hatchet Cloud credentials.",
+      "requires": [],
       "incompatible_with": []
     },
     {

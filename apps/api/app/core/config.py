@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
 
-    # Redis — 留空则禁用 Redis、缓存和任务队列
+    # Redis — 留空则禁用 Redis 与缓存
     redis_url: str | None = None
 
     # Sentry — 留空则禁用错误追踪
