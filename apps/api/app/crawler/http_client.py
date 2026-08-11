@@ -166,7 +166,8 @@ class SafeAsyncHTTPTransport(httpx.AsyncBaseTransport):
         )
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        assert isinstance(request.stream, httpx.AsyncByteStream)
+        if not isinstance(request.stream, httpx.AsyncByteStream):
+            raise TypeError("safe crawler transport requires an asynchronous request stream")
         req = httpcore.Request(
             method=request.method,
             url=httpcore.URL(
