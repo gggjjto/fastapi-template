@@ -8,12 +8,15 @@ persistence, retry, and network safety. Add new crawler behavior under
 
 1. `CrawlerService` creates or reuses a PostgreSQL job with pending execution
    and dispatch states.
-2. `make api-crawler-dispatcher` leases pending rows and submits Hatchet runs.
+2. `make api-crawler-dispatcher` continuously leases pending rows and submits
+   Hatchet runs. It drains successful batches immediately, then waits when idle.
 3. `make api-worker` executes the registered handler and stores its structured
    result in PostgreSQL JSONB.
 
 The API does not import Hatchet and starts without `HATCHET_CLIENT_TOKEN`.
 Only the dispatcher and worker require the token.
+Set `APP_CRAWLER_DISPATCH_INTERVAL_SECONDS` to control the idle and error retry
+interval; it defaults to one second and must be greater than zero.
 
 ## Add a crawler
 

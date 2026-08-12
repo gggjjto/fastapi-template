@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./app.db"
     sqlalchemy_echo: bool = False
     db_create_tables_on_startup: bool = True
+    crawler_dispatch_interval_seconds: float = Field(default=1.0, gt=0)
 
     # JWT 认证
     jwt_secret: str = DEFAULT_JWT_SECRET

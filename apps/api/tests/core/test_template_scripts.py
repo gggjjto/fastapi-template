@@ -154,6 +154,7 @@ def test_template_copy_excludes_runtime_directories(tmp_path: Path) -> None:
     assert "httpx" in pyproject
     assert '"arq' not in pyproject
     assert "HATCHET_CLIENT_TOKEN" in env_example
+    assert "APP_CRAWLER_DISPATCH_INTERVAL_SECONDS" in env_example
     assert "api-worker:" in root_makefile
     assert "api-crawler-dispatcher:" in root_makefile
     assert "uv run python -m app.worker" in api_makefile
