@@ -6,8 +6,8 @@ from uuid import uuid4
 
 from hatchet_sdk.exceptions import IdempotencyCollisionError
 
-from app.crawler.dispatcher import dispatch_once
-from app.crawler.repository import LeasedCrawlJob
+from app.crawler.persistence.repository import LeasedCrawlJob
+from app.crawler.runtime.dispatcher import dispatch_once
 
 
 class FakeSession:

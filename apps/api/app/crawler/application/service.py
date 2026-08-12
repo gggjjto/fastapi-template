@@ -3,10 +3,10 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crawler.exceptions import CrawlJobConflict, CrawlTargetNotFound
-from app.crawler.models import CrawlJob
-from app.crawler.repository import CrawlerRepository
-from app.crawler.schemas import CrawlJobCreate
+from app.crawler.domain.exceptions import CrawlJobConflict, CrawlTargetNotFound
+from app.crawler.domain.models import CrawlJob
+from app.crawler.domain.schemas import CrawlJobCreate
+from app.crawler.persistence.repository import CrawlerRepository
 
 
 class CrawlerService:

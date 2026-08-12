@@ -30,6 +30,10 @@ The platform discovers the module at worker startup and owns job state,
 idempotency, dispatch, retries, and network policy. Add a focused handler test;
 do not edit the worker or dispatcher for each crawler.
 
+Infrastructure is grouped by responsibility: contracts and models in `domain/`,
+submission in `application/`, database access in `persistence/`, Hatchet execution
+in `runtime/`, and outbound HTTP policy in `network/`.
+
 ## Task input
 
 Hatchet receives identifiers and routing metadata only:

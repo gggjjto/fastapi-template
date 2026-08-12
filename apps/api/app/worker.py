@@ -10,8 +10,8 @@ from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.worker.worker import Worker
 from pydantic import BaseModel
 
-from app.crawler.registry import discover_handlers
-from app.crawler.runner import create_crawl_task
+from app.crawler.runtime.registry import discover_handlers
+from app.crawler.runtime.runner import create_crawl_task
 
 logger = structlog.get_logger(__name__)
 hatchet = Hatchet()

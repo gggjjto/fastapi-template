@@ -6,13 +6,13 @@ import socket
 import httpx
 import pytest
 
-from app.crawler.exceptions import (
+from app.crawler.domain.exceptions import (
     CrawlerBodyTooLargeError,
     CrawlerHTTPStatusError,
     CrawlerRedirectError,
     CrawlerUnsafeHostError,
 )
-from app.crawler.http_client import (
+from app.crawler.network.http_client import (
     SafeAsyncCrawlerClient,
     SafeAsyncNetworkBackend,
     _resolve_safe_host,
@@ -49,7 +49,7 @@ async def test_network_backend_connects_to_validated_ip(
             calls.append(host)
             return object()
 
-    monkeypatch.setattr("app.crawler.http_client._resolve_safe_host", safe)
+    monkeypatch.setattr("app.crawler.network.http_client._resolve_safe_host", safe)
     backend = SafeAsyncNetworkBackend(Backend())  # type: ignore[arg-type]
     await backend.connect_tcp("example.com", 443)
     assert calls == ["93.184.216.34"]
@@ -59,7 +59,7 @@ async def test_client_rejects_cross_host_redirect(monkeypatch: pytest.MonkeyPatc
     async def safe(*args: object, **kwargs: object) -> str:
         return "93.184.216.34"
 
-    monkeypatch.setattr("app.crawler.http_client._resolve_safe_host", safe)
+    monkeypatch.setattr("app.crawler.network.http_client._resolve_safe_host", safe)
     transport = httpx.MockTransport(
         lambda request: httpx.Response(302, headers={"location": "https://other.test/"})
     )
@@ -72,7 +72,7 @@ async def test_client_enforces_body_cap(monkeypatch: pytest.MonkeyPatch) -> None
     async def safe(*args: object, **kwargs: object) -> str:
         return "93.184.216.34"
 
-    monkeypatch.setattr("app.crawler.http_client._resolve_safe_host", safe)
+    monkeypatch.setattr("app.crawler.network.http_client._resolve_safe_host", safe)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=b"large"))
     async with SafeAsyncCrawlerClient(transport=transport, max_bytes=4) as client:
         with pytest.raises(CrawlerBodyTooLargeError):
@@ -83,7 +83,7 @@ async def test_http_error_exposes_retry_classification(monkeypatch: pytest.Monke
     async def safe(*args: object, **kwargs: object) -> str:
         return "93.184.216.34"
 
-    monkeypatch.setattr("app.crawler.http_client._resolve_safe_host", safe)
+    monkeypatch.setattr("app.crawler.network.http_client._resolve_safe_host", safe)
     transport = httpx.MockTransport(lambda request: httpx.Response(429))
     async with SafeAsyncCrawlerClient(transport=transport) as client:
         with pytest.raises(CrawlerHTTPStatusError) as raised:

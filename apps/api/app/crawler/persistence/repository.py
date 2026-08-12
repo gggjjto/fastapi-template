@@ -9,13 +9,13 @@ from urllib.parse import urlsplit
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crawler.constants import (
+from app.crawler.domain.constants import (
     MAX_DISPATCH_ATTEMPTS,
     CrawlDispatchState,
     CrawlErrorCategory,
     CrawlJobStatus,
 )
-from app.crawler.models import CrawlJob, CrawlTarget
+from app.crawler.domain.models import CrawlJob, CrawlTarget
 
 
 @dataclass(frozen=True, slots=True)

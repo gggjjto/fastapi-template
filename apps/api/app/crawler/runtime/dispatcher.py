@@ -7,10 +7,10 @@ import structlog
 from hatchet_sdk import Hatchet
 from hatchet_sdk.exceptions import IdempotencyCollisionError
 
-from app.crawler.constants import LEASE_SECONDS
-from app.crawler.repository import CrawlerRepository, LeasedCrawlJob
-from app.crawler.runner import create_crawl_task
-from app.crawler.schemas import CrawlTaskInput
+from app.crawler.domain.constants import LEASE_SECONDS
+from app.crawler.domain.schemas import CrawlTaskInput
+from app.crawler.persistence.repository import CrawlerRepository, LeasedCrawlJob
+from app.crawler.runtime.runner import create_crawl_task
 from app.db.session import AsyncSessionLocal
 
 logger = structlog.get_logger(__name__)

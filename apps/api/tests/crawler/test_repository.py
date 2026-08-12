@@ -4,11 +4,11 @@ from uuid import uuid4
 
 from sqlalchemy import func, select
 
-from app.crawler.constants import CrawlDispatchState, CrawlJobStatus
-from app.crawler.models import CrawlJob
-from app.crawler.repository import CrawlerRepository
-from app.crawler.schemas import CrawlJobCreate
-from app.crawler.service import CrawlerService
+from app.crawler.application.service import CrawlerService
+from app.crawler.domain.constants import CrawlDispatchState, CrawlJobStatus
+from app.crawler.domain.models import CrawlJob
+from app.crawler.domain.schemas import CrawlJobCreate
+from app.crawler.persistence.repository import CrawlerRepository
 from app.db.session import AsyncSessionLocal
 
 

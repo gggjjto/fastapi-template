@@ -4,9 +4,9 @@ import importlib
 import pkgutil
 from collections.abc import Awaitable, Callable
 
-from app.crawler.exceptions import PermanentCrawlerError
-from app.crawler.http_client import SafeAsyncCrawlerClient
-from app.crawler.models import CrawlTarget
+from app.crawler.domain.exceptions import PermanentCrawlerError
+from app.crawler.domain.models import CrawlTarget
+from app.crawler.network.http_client import SafeAsyncCrawlerClient
 
 CrawlerHandler = Callable[[CrawlTarget, SafeAsyncCrawlerClient], Awaitable[dict[str, object]]]
 

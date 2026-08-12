@@ -21,7 +21,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
-from app.crawler.constants import MAX_EXECUTION_ATTEMPTS, CrawlDispatchState, CrawlJobStatus
+from app.crawler.domain.constants import (
+    MAX_EXECUTION_ATTEMPTS,
+    CrawlDispatchState,
+    CrawlJobStatus,
+)
 from app.db.base import Base
 
 ResultJson = JSON().with_variant(JSONB, "postgresql")

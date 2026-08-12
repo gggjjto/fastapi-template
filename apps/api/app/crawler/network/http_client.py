@@ -13,7 +13,7 @@ from httpcore._backends.anyio import AnyIOBackend
 from httpx._config import create_ssl_context
 from httpx._transports.default import AsyncResponseStream, map_httpcore_exceptions
 
-from app.crawler import exceptions as crawler_exceptions
+from app.crawler.domain import exceptions as crawler_exceptions
 
 # httpcore's AsyncNetworkBackend contract names this parameter `timeout`.
 # ruff: noqa: ASYNC109

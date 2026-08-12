@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.core.exceptions import ConflictError, NotFoundError
-from app.crawler.constants import ErrorCode
+from app.crawler.domain.constants import ErrorCode
 
 
 class CrawlJobConflict(ConflictError):

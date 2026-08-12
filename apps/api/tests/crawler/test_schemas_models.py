@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.crawler.constants import CrawlJobStatus
-from app.crawler.models import CrawlJob, CrawlTarget
-from app.crawler.schemas import CrawlTaskInput
+from app.crawler.domain.constants import CrawlJobStatus
+from app.crawler.domain.models import CrawlJob, CrawlTarget
+from app.crawler.domain.schemas import CrawlTaskInput
 
 
 def _unique_columns(model: type[object]) -> set[tuple[str, ...]]:

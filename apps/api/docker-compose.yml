@@ -48,7 +48,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
-    command: uv run python -m app.crawler.dispatcher
+    command: uv run python -m app.crawler.runtime.dispatcher
 
   # ── PostgreSQL ────────────────────────────────────────────────────────────
   db:

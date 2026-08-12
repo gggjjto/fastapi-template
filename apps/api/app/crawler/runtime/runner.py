@@ -11,12 +11,16 @@ from hatchet_sdk.types.idempotency import TTLBasedIdempotencyConfig
 from hatchet_sdk.types.rate_limit import RateLimit, RateLimitDuration
 from pydantic import ValidationError
 
-from app.crawler.constants import MAX_EXECUTION_ATTEMPTS, CrawlErrorCategory, CrawlJobStatus
-from app.crawler.exceptions import PermanentCrawlerError
-from app.crawler.http_client import SafeAsyncCrawlerClient
-from app.crawler.registry import registry
-from app.crawler.repository import CrawlerRepository
-from app.crawler.schemas import CrawlTaskInput
+from app.crawler.domain.constants import (
+    MAX_EXECUTION_ATTEMPTS,
+    CrawlErrorCategory,
+    CrawlJobStatus,
+)
+from app.crawler.domain.exceptions import PermanentCrawlerError
+from app.crawler.domain.schemas import CrawlTaskInput
+from app.crawler.network.http_client import SafeAsyncCrawlerClient
+from app.crawler.persistence.repository import CrawlerRepository
+from app.crawler.runtime.registry import registry
 from app.db.session import AsyncSessionLocal
 
 

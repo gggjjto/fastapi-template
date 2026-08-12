@@ -34,7 +34,7 @@ worker:
 	uv run python -m app.worker
 
 crawler-dispatcher:
-	uv run python -m app.crawler.dispatcher
+	uv run python -m app.crawler.runtime.dispatcher
 
 lint:
 	uv run ruff check .

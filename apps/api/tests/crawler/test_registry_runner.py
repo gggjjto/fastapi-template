@@ -8,16 +8,20 @@ import pytest
 from hatchet_sdk.exceptions import NonRetryableException
 from pydantic import ValidationError
 
-import app.crawler.runner as runner_module
-from app.crawler.constants import CrawlJobStatus
-from app.crawler.exceptions import (
+import app.crawler.runtime.runner as runner_module
+from app.crawler.domain.constants import CrawlJobStatus
+from app.crawler.domain.exceptions import (
     CrawlerHTTPStatusError,
     CrawlerNetworkError,
     PermanentCrawlerError,
 )
-from app.crawler.registry import CrawlerRegistry, DuplicateCrawlerError, UnknownCrawlerError
-from app.crawler.runner import _is_retryable, run_crawl_task
-from app.crawler.schemas import CrawlTaskInput
+from app.crawler.domain.schemas import CrawlTaskInput
+from app.crawler.runtime.registry import (
+    CrawlerRegistry,
+    DuplicateCrawlerError,
+    UnknownCrawlerError,
+)
+from app.crawler.runtime.runner import _is_retryable, run_crawl_task
 
 
 async def _handler(target: Any, client: Any) -> dict[str, object]:
