@@ -6,8 +6,6 @@ binary assets.
 ## Setup
 
 ```bash
-make create-project name=files-api target=../files-api
-cd ../files-api
 make api-install
 cp apps/api/.env.example apps/api/.env
 ```

@@ -6,8 +6,6 @@ roles, jobs, audits, or support workflows.
 ## Setup
 
 ```bash
-make create-project name=admin-api target=../admin-api
-cd ../admin-api
 make api-install
 cp apps/api/.env.example apps/api/.env
 ```

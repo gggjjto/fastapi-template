@@ -4,9 +4,8 @@
 
 The repository Harness is intentionally small: `AGENTS.md` is the entry map,
 `.agents/` owns rules, active requirements, and on-demand skills, and
-`scripts/check_ai_workflow.py` enforces stable structural invariants. Generated
-projects receive the same repository-local contract. `.omx/` is optional runtime
-state and is never part of the generated template.
+`scripts/check_ai_workflow.py` enforces stable structural invariants. `.omx/` is
+optional runtime state and is never committed.
 
 ## Source-of-truth ownership
 
@@ -16,13 +15,12 @@ state and is never part of the generated template.
 | Rules and workflow index | `.agents/README.md`, `.agents/rules/INDEX.md` |
 | Active requirements | `.agents/requirements.md` |
 | Product architecture conventions | `docs/conventions/` |
-| Generated-project contents | `templates/*/template.json`, `scripts/create_project.py` |
 | Deterministic Harness enforcement | `scripts/check_ai_workflow.py` |
 | Optional live-eval evidence | This document, after manual approval |
 
 ## Current quality status
 
-- Repository-local Harness is copied into generated FastAPI projects.
+- Repository-local Harness is part of the cloned project.
 - Product lint, type, build, and integration-test gates remain authoritative.
 - Deterministic Harness checks are required; model-backed evaluations are manual.
 - Latest approved live-eval summary (2026-07-20): `forbidden-workflow-path`

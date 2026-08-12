@@ -55,7 +55,7 @@ def load_catalog(path: Path) -> dict[str, Any]:
         if case["id"] in ids:
             raise ValueError(f"duplicate case id: {case['id']}")
         ids.add(case["id"])
-        if case["fixture"] != "generated_project":
+        if case["fixture"] != "repository_copy":
             raise ValueError(f"{case['id']}: unsupported fixture {case['fixture']!r}")
         if case["command"] != ALLOWED_COMMAND:
             raise ValueError(f"{case['id']}: command is outside the deterministic allowlist")
@@ -112,31 +112,11 @@ def _check_assertions(workspace: Path, assertions: list[dict[str, str]]) -> list
 def run_case(case: dict[str, Any]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix=f"harness-{case['id']}-") as temporary:
         workspace = Path(temporary) / "project"
-        if (ROOT / "templates/fastapi-api/template.json").exists():
-            generated = subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "scripts/create_project.py"),
-                    "Harness Eval",
-                    str(workspace),
-                ],
-                cwd=ROOT,
-                capture_output=True,
-                check=False,
-                text=True,
-            )
-            if generated.returncode != 0:
-                return {
-                    "id": case["id"],
-                    "passed": False,
-                    "failures": ["project generation failed"],
-                }
-        else:
-            shutil.copytree(
-                ROOT,
-                workspace,
-                ignore=shutil.ignore_patterns(*COPY_EXCLUDES),
-            )
+        shutil.copytree(
+            ROOT,
+            workspace,
+            ignore=shutil.ignore_patterns(*COPY_EXCLUDES),
+        )
 
         _apply_setup(workspace, case.get("setup", []))
         result = subprocess.run(

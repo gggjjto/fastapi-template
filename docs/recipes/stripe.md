@@ -6,8 +6,6 @@ payment webhooks.
 ## Setup
 
 ```bash
-make create-project name=billing-api target=../billing-api
-cd ../billing-api
 make api-install
 cp apps/api/.env.example apps/api/.env
 ```

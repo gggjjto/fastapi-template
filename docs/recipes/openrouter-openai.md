@@ -6,8 +6,6 @@ provider keys and request shaping out of route handlers.
 ## Setup
 
 ```bash
-make create-project name=ai-api target=../ai-api
-cd ../ai-api
 make api-install
 cp apps/api/.env.example apps/api/.env
 ```

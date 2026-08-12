@@ -13,7 +13,7 @@ templates when needed.
 - Structured logging, request-id tracing, rate limiting
 - Ready for production hardening and CI-backed workflows
 - i18n error messages and async SQLAlchemy + Alembic setup
-- Recipes and scripts for spinning up new projects from the template
+- Recipes for adapting the repository to common project shapes
 - Next.js App Router web workspace with pnpm + Turborepo coordination
 - Shared JS/TS config package for workspace apps
 
@@ -67,37 +67,23 @@ Check local prerequisites:
 
 ```bash
 make doctor
-make doctor template=fastapi-api
 make harness-check
 # Optional: runs disposable-workspace live coding-agent evaluations
 make harness-eval
 ```
 
-Create a copy of the template with project naming applied:
+Start a project by cloning the repository and replacing its Git history:
 
 ```bash
-make create-project name=my-saas-api target=../my-saas-api
+git clone <repository-url> my-saas-api
+cd my-saas-api
+rm -rf .git
+git init
 ```
 
-The generator prints the template id and version used for the new project.
-
-Template capability flags are available for planning future slimmer variants.
-They validate combinations and print selected capabilities while the current
-`fastapi-api` template still includes the production-minded backend surface by
-default:
+Then initialize it:
 
 ```bash
-python3 scripts/create_project.py my-api ../my-api --with-auth --with-rbac
-python3 scripts/create_project.py jobs-api ../jobs-api --with-redis --with-worker
-```
-
-See [`templates/fastapi-api/OPTIONS.md`](./templates/fastapi-api/OPTIONS.md)
-for the exact files and environment variables associated with each option.
-
-Then initialize the generated project:
-
-```bash
-cd ../my-saas-api
 make api-install
 cp apps/api/.env.example apps/api/.env
 make api-test-up

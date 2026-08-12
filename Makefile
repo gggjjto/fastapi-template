@@ -1,4 +1,4 @@
-.PHONY: help doctor create-project install dev lint typecheck test build web-dev \
+.PHONY: help doctor install dev lint typecheck test build web-dev \
         web-lint web-typecheck web-build api-install api-dev api-worker api-crawler-dispatcher api-lint api-lint-fix api-format \
         api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
         api-test-down api-migrate api-revision api-docker-build api-docker-run harness-check \
@@ -7,7 +7,6 @@
 help:
 	@echo "Available workspace targets:"
 	@echo "  doctor              Check local development prerequisites"
-	@echo "  create-project      Create a new project: make create-project name=my-app target=../my-app"
 	@echo "  install             Install JS workspace dependencies"
 	@echo "  dev                 Run all workspace dev tasks through Turbo"
 	@echo "  lint                Run all workspace lint tasks through Turbo"
@@ -42,10 +41,7 @@ help:
 	@echo "  clean               Remove workspace caches"
 
 doctor:
-	python3 scripts/doctor.py --template "$(or $(template),fastapi-api)"
-
-create-project:
-	python3 scripts/create_project.py "$(name)" "$(target)" --template "$(or $(template),fastapi-api)"
+	python3 scripts/doctor.py
 
 install:
 	pnpm install

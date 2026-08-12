@@ -2,8 +2,8 @@
   "schema_version": 1,
   "cases": [
     {
-      "id": "generated-harness-presence",
-      "fixture": "generated_project",
+      "id": "repository-harness-presence",
+      "fixture": "repository_copy",
       "command": ["python3", "scripts/check_ai_workflow.py"],
       "assertions": [
         {"kind": "path_exists", "path": ".agents/README.md"},
@@ -15,7 +15,7 @@
     },
     {
       "id": "endpoint-workflow-routing",
-      "fixture": "generated_project",
+      "fixture": "repository_copy",
       "command": ["python3", "scripts/check_ai_workflow.py"],
       "assertions": [
         {"kind": "file_contains", "path": ".agents/README.md", "value": "add-endpoint"},
@@ -27,7 +27,7 @@
     },
     {
       "id": "bug-fix-workflow-routing",
-      "fixture": "generated_project",
+      "fixture": "repository_copy",
       "command": ["python3", "scripts/check_ai_workflow.py"],
       "assertions": [
         {"kind": "file_contains", "path": ".agents/README.md", "value": "fix-bug"},
@@ -39,7 +39,7 @@
     },
     {
       "id": "documentation-rule-routing",
-      "fixture": "generated_project",
+      "fixture": "repository_copy",
       "command": ["python3", "scripts/check_ai_workflow.py"],
       "assertions": [
         {"kind": "file_contains", "path": ".agents/rules/INDEX.md", "value": "docs-maintenance.md"},
@@ -51,7 +51,7 @@
     },
     {
       "id": "forbidden-source-split-detection",
-      "fixture": "generated_project",
+      "fixture": "repository_copy",
       "setup": [{"kind": "create_directory", "path": ".codex"}],
       "command": ["python3", "scripts/check_ai_workflow.py"],
       "assertions": [],

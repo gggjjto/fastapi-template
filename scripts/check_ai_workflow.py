@@ -267,41 +267,6 @@ def check_skill_shape(root: Path = ROOT) -> list[str]:
     return failures
 
 
-def check_generator_contract(root: Path = ROOT) -> list[str]:
-    manifest_path = root / "templates/fastapi-api/template.json"
-    generator_path = root / "scripts/create_project.py"
-    if not manifest_path.exists() or not generator_path.exists():
-        return []
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    generated = set(manifest.get("generated_paths", []))
-    failures = [
-        _failure(
-            manifest_path.relative_to(root).as_posix(),
-            f"generated_paths omits {path!r}",
-            "Declare the portable Harness path",
-        )
-        for path in sorted(PORTABLE_HARNESS_PATHS - generated)
-    ]
-    tree = ast.parse(generator_path.read_text(encoding="utf-8"), filename=str(generator_path))
-    support_paths: set[str] = set()
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == "WORKSPACE_SUPPORT_PATHS"
-            for target in node.targets
-        ):
-            support_paths = set(ast.literal_eval(node.value))
-    for path in (".agents", "skills-lock.json", "docs/harness-engineering.md"):
-        if path not in support_paths:
-            failures.append(
-                _failure(
-                    generator_path.relative_to(root).as_posix(),
-                    f"WORKSPACE_SUPPORT_PATHS omits {path!r}",
-                    "Add the portable Harness path",
-                )
-            )
-    return failures
-
-
 def _import_names(path: Path) -> list[str]:
     source = path.read_text(encoding="utf-8")
     # Keep the guard runnable with the system Python on macOS while the project
@@ -379,7 +344,6 @@ def run_checks(root: Path = ROOT) -> list[str]:
         check_index_coverage,
         check_active_requirements,
         check_skill_shape,
-        check_generator_contract,
         check_import_boundaries,
     ):
         failures.extend(check(root))

@@ -22,13 +22,6 @@ not need, and keep the backend quality gate intact.
 
 ```bash
 make doctor
-python3 scripts/create_project.py my-project ../my-project
-```
-
-After creating a project:
-
-```bash
-cd ../my-project
 make api-install
 cp apps/api/.env.example apps/api/.env
 make api-test-up

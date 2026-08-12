@@ -1,13 +1,11 @@
 # Deployment
 
-Use this recipe to prepare a generated project for a production-like deployment
+Use this recipe to prepare the project for a production-like deployment
 with separate API, worker, database, Redis, and optional web hosting.
 
 ## Setup
 
 ```bash
-make create-project name=deployable-api target=../deployable-api
-cd ../deployable-api
 make api-install
 cp apps/api/.env.example apps/api/.env
 make api-ci

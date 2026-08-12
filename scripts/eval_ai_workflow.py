@@ -168,28 +168,11 @@ def run_case(
     changed: list[str] = []
     policy: list[str] = []
     try:
-        if (ROOT / "templates/fastapi-api/template.json").exists():
-            generated = subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "scripts/create_project.py"),
-                    "Live Harness Eval",
-                    str(workspace),
-                ],
-                cwd=ROOT,
-                capture_output=True,
-                check=False,
-                text=True,
-                timeout=30,
-            )
-            if generated.returncode != 0:
-                raise RuntimeError("project generation failed")
-        else:
-            shutil.copytree(
-                ROOT,
-                workspace,
-                ignore=shutil.ignore_patterns(*sorted(EXCLUDED_PARTS | {".env"})),
-            )
+        shutil.copytree(
+            ROOT,
+            workspace,
+            ignore=shutil.ignore_patterns(*sorted(EXCLUDED_PARTS | {".env"})),
+        )
         _seed(workspace, case["setup"])
         before = _snapshot(workspace)
         command = _agent_command(workspace, case, agent_override)

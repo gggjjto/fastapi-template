@@ -56,7 +56,6 @@ Run one API test from `apps/api` with
   services own business logic, and repositories own persistence.
 - `apps/api/tests/` — integration tests using the real app, PostgreSQL, and Redis.
 - `apps/web/` — Next.js workspace console.
-- `templates/` and `scripts/create_project.py` — generated-project contract.
 - [`docs/conventions/backend-template.md`](docs/conventions/backend-template.md) —
   backend structure, optional services, and detailed conventions.
 - [`docs/harness-engineering.md`](docs/harness-engineering.md) — agent Harness
@@ -95,6 +94,6 @@ process documented in `.agents/README.md` so `skills-lock.json` stays authoritat
 ## Completion contract
 
 Before reporting completion, run the smallest targeted test that proves the change,
-then the affected lint/type/build gates. Harness or generator changes must pass
-`make harness-check` and the template tests. If full integration tests cannot run,
+then the affected lint/type/build gates. Harness changes must pass
+`make harness-check`. If full integration tests cannot run,
 state the missing service and report the next-best checks; never claim an unrun gate.

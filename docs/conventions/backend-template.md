@@ -36,11 +36,9 @@ workspace.
 - New domains should mirror the existing domain-oriented structure:
   `router.py`, `schemas.py`, `models.py`, `repository.py`, `service.py`,
   `dependencies.py`, `constants.py`, and `exceptions.py` as needed.
-- Keep optional infrastructure controlled by environment variables so generated
-  projects can start small.
+- Keep optional infrastructure controlled by environment variables so projects can
+  start small.
 - Use `scripts/doctor.py` or `make doctor` to check local prerequisites before first setup.
-- Use `scripts/create_project.py` as the first generator path until the template
-  catalog exists.
 
 ## Quality Gate
 
