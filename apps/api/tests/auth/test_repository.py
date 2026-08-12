@@ -56,8 +56,12 @@ async def test_auth_session_rotate_updates_hash() -> None:
             ip_address=None,
         )
 
-        await repo.rotate(auth_session, hash_refresh_token("new"))
+        rotated = await repo.rotate(
+            auth_session.id, hash_refresh_token("old"), hash_refresh_token("new")
+        )
+        await session.refresh(auth_session)
 
+        assert rotated is True
         assert auth_session.refresh_token_hash == hash_refresh_token("new")
 
 

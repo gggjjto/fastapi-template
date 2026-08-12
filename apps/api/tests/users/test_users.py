@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 
+import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from app.auth.repository import RbacRepository
+from app.auth.seed import ensure_default_rbac
+from app.db.session import AsyncSessionLocal
+from app.users.models import User
+from app.users.schemas import UserCreate
+from app.users.service import UserService
 
 _USER_PAYLOAD = {"email": "demo@example.com", "full_name": "Demo User", "password": "Password123!"}
 _ADMIN_PAYLOAD = {"email": "admin@example.com", "full_name": "Admin", "password": "Password123!"}
@@ -73,6 +84,120 @@ async def test_duplicate_email_returns_409(client: AsyncClient) -> None:
 
     assert duplicate_response.status_code == 409
     assert duplicate_response.json()["code"] == "USER_EMAIL_CONFLICT"
+
+
+async def test_concurrent_duplicate_email_returns_one_409(client: AsyncClient) -> None:
+    responses = await asyncio.gather(
+        client.post("/api/v1/users", json=_USER_PAYLOAD),
+        client.post("/api/v1/users", json={**_USER_PAYLOAD, "full_name": "Race User"}),
+    )
+
+    assert sorted(resp.status_code for resp in responses) == [201, 409]
+    conflict = next(resp for resp in responses if resp.status_code == 409)
+    assert conflict.json()["code"] == "USER_EMAIL_CONFLICT"
+
+
+async def test_concurrent_initial_users_assigns_one_admin(client: AsyncClient) -> None:
+    user_a = {"email": "a@example.com", "full_name": "User A", "password": "Password123!"}
+    user_b = {"email": "b@example.com", "full_name": "User B", "password": "Password123!"}
+
+    responses = await asyncio.gather(
+        client.post("/api/v1/users", json=user_a),
+        client.post("/api/v1/users", json=user_b),
+    )
+
+    assert [resp.status_code for resp in responses] == [201, 201]
+
+    access_statuses = []
+    for payload in (user_a, user_b):
+        login = await client.post(
+            "/api/v1/auth/token",
+            json={"email": payload["email"], "password": payload["password"]},
+        )
+        token = login.json()["data"]["access_token"]
+        access = await client.get("/api/v1/users", headers={"Authorization": f"Bearer {token}"})
+        access_statuses.append(access.status_code)
+
+    assert sorted(access_statuses) == [200, 403]
+
+
+async def test_role_assignment_failure_rolls_back_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fail_assign_role_to_user(self: object, user_id: object, role_id: object) -> None:
+        raise RuntimeError("role assignment failed")
+
+    async with AsyncSessionLocal() as session:
+        await ensure_default_rbac(session)
+
+    monkeypatch.setattr(RbacRepository, "assign_role_to_user", fail_assign_role_to_user)
+
+    with pytest.raises(RuntimeError, match="role assignment failed"):
+        async with AsyncSessionLocal() as session:
+            await UserService(session).create_user(
+                UserCreate(
+                    email="rollback@example.com",
+                    full_name="Rollback User",
+                    password="Password123!",
+                )
+            )
+
+    async with AsyncSessionLocal() as session:
+        user = (
+            await session.scalars(select(User).where(User.email == "rollback@example.com"))
+        ).one_or_none()
+
+    assert user is None
+
+
+async def test_missing_default_role_rolls_back_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def missing_role(self: object, name: object) -> None:
+        return None
+
+    async with AsyncSessionLocal() as session:
+        await ensure_default_rbac(session)
+
+    monkeypatch.setattr(RbacRepository, "get_role_by_name", missing_role)
+
+    with pytest.raises(RuntimeError, match="Default role not found"):
+        async with AsyncSessionLocal() as session:
+            await UserService(session).create_user(
+                UserCreate(
+                    email="missing-role@example.com",
+                    full_name="Missing Role",
+                    password="Password123!",
+                )
+            )
+
+    async with AsyncSessionLocal() as session:
+        user = (
+            await session.scalars(select(User).where(User.email == "missing-role@example.com"))
+        ).one_or_none()
+
+    assert user is None
+
+
+async def test_non_email_integrity_error_is_not_mapped_to_email_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def create_with_other_integrity_error(self: object, **kwargs: object) -> User:
+        raise IntegrityError("insert", {}, Exception("uq_other_table_column"))
+
+    async with AsyncSessionLocal() as session:
+        await ensure_default_rbac(session)
+
+    monkeypatch.setattr(
+        "app.users.repository.UserRepository.create",
+        create_with_other_integrity_error,
+    )
+
+    with pytest.raises(IntegrityError, match="uq_other_table_column"):
+        async with AsyncSessionLocal() as session:
+            await UserService(session).create_user(
+                UserCreate(
+                    email="integrity@example.com",
+                    full_name="Integrity User",
+                    password="Password123!",
+                )
+            )
 
 
 async def test_get_user_by_id(client: AsyncClient) -> None:

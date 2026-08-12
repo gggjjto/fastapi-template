@@ -1,36 +1,79 @@
 from __future__ import annotations
 
-from httpx import AsyncClient
+import os
+import subprocess
+import sys
+
+from app.core.config import get_settings
+from app.main import app
 
 _HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
+_settings = get_settings()
 
 
-async def _schema(client: AsyncClient) -> dict:
-    resp = await client.get("/openapi.json")
-    assert resp.status_code == 200
-    return resp.json()
+def _api_path(path: str) -> str:
+    return f"{_settings.api_v1_prefix}{path}"
 
 
-async def test_openapi_exposes_bearer_security_scheme(client: AsyncClient) -> None:
-    schema = await _schema(client)
+def _schema() -> dict:
+    return app.openapi()
+
+
+def test_openapi_exposes_bearer_security_scheme() -> None:
+    schema = _schema()
     assert "OAuth2PasswordBearer" in schema["components"]["securitySchemes"]
 
 
-async def test_protected_route_declares_security(client: AsyncClient) -> None:
-    schema = await _schema(client)
-    assert "security" in schema["paths"]["/api/v1/auth/me"]["get"]
+def test_api_prefix_drives_routes_and_oauth_token_url() -> None:
+    schema = _schema()
+    token_path = _api_path("/auth/token")
+    assert token_path in schema["paths"]
+    assert (
+        schema["components"]["securitySchemes"]["OAuth2PasswordBearer"]["flows"]["password"][
+            "tokenUrl"
+        ]
+        == token_path
+    )
 
 
-async def test_error_envelope_schema_is_reused(client: AsyncClient) -> None:
-    schema = await _schema(client)
+def test_custom_api_prefix_drives_routes_and_oauth_token_url() -> None:
+    code = """
+from app.main import app
+
+schema = app.openapi()
+token_path = "/custom/auth/token"
+assert token_path in schema["paths"]
+assert "/api/v1/auth/token" not in schema["paths"]
+assert (
+    schema["components"]["securitySchemes"]["OAuth2PasswordBearer"]["flows"]["password"][
+        "tokenUrl"
+    ]
+    == token_path
+)
+"""
+    subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        env={**os.environ, "APP_API_V1_PREFIX": "/custom"},
+        text=True,
+    )
+
+
+def test_protected_route_declares_security() -> None:
+    schema = _schema()
+    assert "security" in schema["paths"][_api_path("/auth/me")]["get"]
+
+
+def test_error_envelope_schema_is_reused() -> None:
+    schema = _schema()
     assert "ErrorResponse" in schema["components"]["schemas"]
-    get_user = schema["paths"]["/api/v1/users/{user_id}"]["get"]
+    get_user = schema["paths"][_api_path("/users/{user_id}")]["get"]
     assert "404" in get_user["responses"]
     assert "401" in get_user["responses"]
 
 
-async def test_every_operation_has_summary_and_tags(client: AsyncClient) -> None:
-    schema = await _schema(client)
+def test_every_operation_has_summary_and_tags() -> None:
+    schema = _schema()
     for path, operations in schema["paths"].items():
         for method, operation in operations.items():
             if method not in _HTTP_METHODS:

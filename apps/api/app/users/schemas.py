@@ -2,17 +2,24 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import EmailStr, Field
+from pydantic import AfterValidator, EmailStr, Field
 
+from app.auth.security import validate_bcrypt_password_length
 from app.core.schemas import CustomModel
+
+BcryptPassword = Annotated[str, AfterValidator(validate_bcrypt_password_length)]
 
 
 class UserCreate(CustomModel):
     email: EmailStr = Field(description="用户邮箱，全局唯一", examples=["user@example.com"])
     full_name: str = Field(min_length=1, max_length=255, description="用户姓名", examples=["张三"])
-    password: str = Field(
-        min_length=8, max_length=128, description="密码，8~128 位", examples=["Password123!"]
+    password: BcryptPassword = Field(
+        min_length=8,
+        max_length=128,
+        description="密码，8~128 位，最多 72 个 UTF-8 字节",
+        examples=["Password123!"],
     )
 
 

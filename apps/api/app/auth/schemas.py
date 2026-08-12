@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-from pydantic import EmailStr, Field
+from typing import Annotated
 
+from pydantic import AfterValidator, EmailStr, Field
+
+from app.auth.security import validate_bcrypt_password_length
 from app.core.schemas import CustomModel
+
+BcryptPassword = Annotated[str, AfterValidator(validate_bcrypt_password_length)]
 
 
 class LoginRequest(CustomModel):
     email: EmailStr = Field(description="用户邮箱", examples=["user@example.com"])
-    password: str = Field(
-        min_length=8, max_length=128, description="用户密码", examples=["Password123!"]
+    password: BcryptPassword = Field(
+        min_length=8,
+        max_length=128,
+        description="用户密码，最多 72 个 UTF-8 字节",
+        examples=["Password123!"],
     )
 
 

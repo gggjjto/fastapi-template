@@ -12,12 +12,23 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+BCRYPT_PASSWORD_MAX_BYTES = 72
+
+
+def validate_bcrypt_password_length(password: str) -> str:
+    if len(password.encode("utf-8")) > BCRYPT_PASSWORD_MAX_BYTES:
+        raise ValueError(f"Password must be at most {BCRYPT_PASSWORD_MAX_BYTES} UTF-8 bytes")
+    return password
+
 
 def hash_password(password: str) -> str:
+    validate_bcrypt_password_length(password)
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    if len(plain.encode("utf-8")) > BCRYPT_PASSWORD_MAX_BYTES:
+        return False
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
