@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from app.crawler.http_client import SafeAsyncCrawlerClient
-from app.crawler.models import CrawlTarget
-from app.crawler.registry import register_handler
+from app.crawler.domain.models import CrawlTarget
+from app.crawler.network.http_client import SafeAsyncCrawlerClient
+from app.crawler.runtime.registry import register_handler
 
 
 @register_handler("example")

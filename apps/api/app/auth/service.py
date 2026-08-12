@@ -75,7 +75,14 @@ class AuthService:
 
         # 轮换：颁发新 refresh token，更新会话中的哈希，旧 token 随即失效。
         new_refresh_token = create_refresh_token(user_id, session_id, uuid4().hex)
-        await self.sessions.rotate(auth_session, hash_refresh_token(new_refresh_token))
+        rotated = await self.sessions.rotate(
+            session_id, token_hash, hash_refresh_token(new_refresh_token)
+        )
+        if not rotated:
+            await self.sessions.revoke_all_for_user(user_id)
+            await self.session.commit()
+            raise InvalidToken("Invalid or expired refresh token")
+
         await self.session.commit()
         return TokenResponse(
             access_token=create_access_token(user_id), refresh_token=new_refresh_token

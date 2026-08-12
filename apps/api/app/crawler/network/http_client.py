@@ -13,45 +13,16 @@ from httpcore._backends.anyio import AnyIOBackend
 from httpx._config import create_ssl_context
 from httpx._transports.default import AsyncResponseStream, map_httpcore_exceptions
 
-from app.crawler import exceptions as crawler_exceptions
+from app.crawler.domain.exceptions import (
+    CrawlerBodyTooLargeError,
+    CrawlerHTTPStatusError,
+    CrawlerNetworkError,
+    CrawlerRedirectError,
+    CrawlerUnsafeHostError,
+)
 
 # httpcore's AsyncNetworkBackend contract names this parameter `timeout`.
 # ruff: noqa: ASYNC109
-
-
-class _FallbackCrawlerNetworkError(Exception):
-    pass
-
-
-class _FallbackCrawlerUnsafeHostError(_FallbackCrawlerNetworkError):
-    pass
-
-
-class _FallbackCrawlerRedirectError(_FallbackCrawlerNetworkError):
-    pass
-
-
-class _FallbackCrawlerBodyTooLargeError(_FallbackCrawlerNetworkError):
-    pass
-
-
-class _FallbackCrawlerHTTPStatusError(_FallbackCrawlerNetworkError):
-    pass
-
-
-def _exception_type(name: str, fallback: type[Exception]) -> type[Exception]:
-    value = getattr(crawler_exceptions, name, fallback)
-    return value if isinstance(value, type) and issubclass(value, Exception) else fallback
-
-
-CrawlerNetworkError = _exception_type("CrawlerNetworkError", _FallbackCrawlerNetworkError)
-CrawlerUnsafeHostError = _exception_type("CrawlerUnsafeHostError", _FallbackCrawlerUnsafeHostError)
-CrawlerRedirectError = _exception_type("CrawlerRedirectError", _FallbackCrawlerRedirectError)
-CrawlerBodyTooLargeError = _exception_type(
-    "CrawlerBodyTooLargeError",
-    _FallbackCrawlerBodyTooLargeError,
-)
-CrawlerHTTPStatusError = _exception_type("CrawlerHTTPStatusError", _FallbackCrawlerHTTPStatusError)
 
 
 DEFAULT_TIMEOUT = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)

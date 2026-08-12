@@ -10,13 +10,14 @@ from fastapi.security import OAuth2PasswordBearer
 from app.auth import constants as auth_constants
 from app.auth.repository import RbacRepository
 from app.auth.security import decode_access_token
+from app.core.config import get_settings
 from app.core.exceptions import ForbiddenError
 from app.core.request_context import bind_user_id
 from app.db.session import DBSession
 from app.users.models import User
 from app.users.repository import UserRepository
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{get_settings().api_v1_prefix}/auth/token")
 
 CurrentToken = Annotated[str, Depends(oauth2_scheme)]
 

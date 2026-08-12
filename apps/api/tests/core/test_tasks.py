@@ -103,8 +103,8 @@ def test_create_worker_registers_example_task_with_expected_capacity(
 
 
 def test_crawl_task_uses_expected_hatchet_policy() -> None:
-    from app.crawler.runner import create_crawl_task
-    from app.crawler.schemas import CrawlTaskInput
+    from app.crawler.domain.schemas import CrawlTaskInput
+    from app.crawler.runtime.runner import create_crawl_task
 
     calls: list[dict[str, Any]] = []
 

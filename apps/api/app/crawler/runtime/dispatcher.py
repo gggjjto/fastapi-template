@@ -7,10 +7,11 @@ import structlog
 from hatchet_sdk import Hatchet
 from hatchet_sdk.exceptions import IdempotencyCollisionError
 
-from app.crawler.constants import LEASE_SECONDS
-from app.crawler.repository import CrawlerRepository, LeasedCrawlJob
-from app.crawler.runner import create_crawl_task
-from app.crawler.schemas import CrawlTaskInput
+from app.core.config import get_settings
+from app.crawler.domain.constants import LEASE_SECONDS
+from app.crawler.domain.schemas import CrawlTaskInput
+from app.crawler.persistence.repository import CrawlerRepository, LeasedCrawlJob
+from app.crawler.runtime.runner import create_crawl_task
 from app.db.session import AsyncSessionLocal
 
 logger = structlog.get_logger(__name__)
@@ -71,16 +72,27 @@ async def _dispatch_job(
     return marked
 
 
-async def run_dispatcher() -> int:
+async def run_dispatcher() -> None:
+    settings = get_settings()
     hatchet = Hatchet()
     task = create_crawl_task(hatchet)
-    async with AsyncSessionLocal() as session:
-        return await dispatch_once(repository=CrawlerRepository(session), task=task)
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                dispatched = await dispatch_once(repository=CrawlerRepository(session), task=task)
+        except Exception:
+            logger.exception("crawler.dispatcher.batch_failed")
+            await asyncio.sleep(settings.crawler_dispatch_interval_seconds)
+            continue
+
+        if dispatched:
+            logger.info("crawler.dispatcher.batch", dispatched=dispatched)
+            continue
+        await asyncio.sleep(settings.crawler_dispatch_interval_seconds)
 
 
 def main() -> None:
-    dispatched = asyncio.run(run_dispatcher())
-    logger.info("crawler.dispatcher.done", dispatched=dispatched)
+    asyncio.run(run_dispatcher())
 
 
 if __name__ == "__main__":

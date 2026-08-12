@@ -19,7 +19,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: uv run python -m app.crawler.dispatcher
+    command: uv run python -m app.crawler.runtime.dispatcher
 
   db:
     image: postgres:16-alpine

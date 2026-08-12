@@ -8,12 +8,15 @@ persistence, retry, and network safety. Add new crawler behavior under
 
 1. `CrawlerService` creates or reuses a PostgreSQL job with pending execution
    and dispatch states.
-2. `make api-crawler-dispatcher` leases pending rows and submits Hatchet runs.
+2. `make api-crawler-dispatcher` continuously leases pending rows and submits
+   Hatchet runs. It drains successful batches immediately, then waits when idle.
 3. `make api-worker` executes the registered handler and stores its structured
    result in PostgreSQL JSONB.
 
 The API does not import Hatchet and starts without `HATCHET_CLIENT_TOKEN`.
 Only the dispatcher and worker require the token.
+Set `APP_CRAWLER_DISPATCH_INTERVAL_SECONDS` to control the idle and error retry
+interval; it defaults to one second and must be greater than zero.
 
 ## Add a crawler
 
@@ -29,6 +32,10 @@ async def product_page(target: CrawlTarget, client: SafeAsyncCrawlerClient) -> d
 The platform discovers the module at worker startup and owns job state,
 idempotency, dispatch, retries, and network policy. Add a focused handler test;
 do not edit the worker or dispatcher for each crawler.
+
+Infrastructure is grouped by responsibility: contracts and models in `domain/`,
+submission in `application/`, database access in `persistence/`, Hatchet execution
+in `runtime/`, and outbound HTTP policy in `network/`.
 
 ## Task input
 

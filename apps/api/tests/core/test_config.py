@@ -61,3 +61,14 @@ def test_development_allows_insecure_defaults() -> None:
         allowed_origins=["*"],
     )
     assert not settings.is_production
+
+
+def test_crawler_dispatch_interval_defaults_to_one_second() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.crawler_dispatch_interval_seconds == 1.0
+
+
+@pytest.mark.parametrize("interval", [0, -1])
+def test_crawler_dispatch_interval_must_be_positive(interval: float) -> None:
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, crawler_dispatch_interval_seconds=interval)

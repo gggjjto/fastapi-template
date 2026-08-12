@@ -9,13 +9,13 @@ from urllib.parse import urlsplit
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crawler.constants import (
+from app.crawler.domain.constants import (
     MAX_DISPATCH_ATTEMPTS,
     CrawlDispatchState,
     CrawlErrorCategory,
     CrawlJobStatus,
 )
-from app.crawler.models import CrawlJob, CrawlTarget
+from app.crawler.domain.models import CrawlJob, CrawlTarget
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,7 +102,6 @@ class CrawlerRepository:
                 .join(CrawlTarget, CrawlTarget.id == CrawlJob.crawl_target_id)
                 .where(
                     eligible,
-                    CrawlJob.dispatch_attempts < MAX_DISPATCH_ATTEMPTS,
                     or_(CrawlJob.next_dispatch_at.is_(None), CrawlJob.next_dispatch_at <= now),
                 )
                 .order_by(CrawlJob.created_at)
@@ -113,6 +112,15 @@ class CrawlerRepository:
         leased_until = now + timedelta(seconds=lease_seconds)
         leased: list[LeasedCrawlJob] = []
         for job, target in rows:
+            if job.dispatch_attempts >= MAX_DISPATCH_ATTEMPTS:
+                job.dispatch_state = CrawlDispatchState.FAILED
+                job.status = CrawlJobStatus.FAILED
+                job.error_category = CrawlErrorCategory.TRANSIENT
+                job.error_code = "DISPATCH_LEASE_EXHAUSTED"
+                job.error_message = "Crawler dispatch lease expired after maximum attempts"
+                job.dispatch_lease_until = None
+                job.next_dispatch_at = None
+                continue
             job.dispatch_state = CrawlDispatchState.LEASED
             job.dispatch_attempts += 1
             job.dispatch_lease_until = leased_until

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
 import jwt
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
 from app.auth.models import AuthSession
+from app.auth.repository import AuthSessionRepository
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
 from app.users.repository import UserRepository
@@ -215,6 +218,41 @@ async def test_refresh_rotates_and_old_token_is_rejected(client: AsyncClient) ->
     # 复用检测后，刚轮换出的新 token 也随之失效
     after = await client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh})
     assert after.status_code == 401
+
+
+async def test_concurrent_refresh_only_rotates_once(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client)
+    tokens = await _login(client)
+
+    original_get_by_id = AuthSessionRepository.get_by_id
+    ready = asyncio.Event()
+    seen = 0
+    seen_lock = asyncio.Lock()
+
+    async def wait_until_both_requests_read_session(self, session_id):
+        nonlocal seen
+
+        auth_session = await original_get_by_id(self, session_id)
+        async with seen_lock:
+            seen += 1
+            if seen == 2:
+                ready.set()
+        await ready.wait()
+        return auth_session
+
+    monkeypatch.setattr(AuthSessionRepository, "get_by_id", wait_until_both_requests_read_session)
+
+    responses = await asyncio.gather(
+        client.post("/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}),
+        client.post("/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}),
+    )
+
+    assert sorted(resp.status_code for resp in responses) == [200, 401]
+    assert [resp.json()["code"] for resp in responses if resp.status_code == 401] == [
+        "AUTH_INVALID_TOKEN"
+    ]
 
 
 async def test_logout_revokes_session(client: AsyncClient) -> None:

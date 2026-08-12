@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import AuthSession, Permission, Role, RolePermission, UserRole
@@ -41,9 +43,21 @@ class AuthSessionRepository:
         result = await self.session.execute(select(AuthSession).where(AuthSession.id == session_id))
         return result.scalar_one_or_none()
 
-    async def rotate(self, auth_session: AuthSession, new_refresh_token_hash: str) -> None:
-        auth_session.refresh_token_hash = new_refresh_token_hash
+    async def rotate(
+        self, session_id: uuid.UUID, old_refresh_token_hash: str, new_refresh_token_hash: str
+    ) -> bool:
+        result = await self.session.execute(
+            update(AuthSession)
+            .where(
+                AuthSession.id == session_id,
+                AuthSession.refresh_token_hash == old_refresh_token_hash,
+                AuthSession.revoked_at.is_(None),
+            )
+            .values(refresh_token_hash=new_refresh_token_hash)
+            .execution_options(synchronize_session=False)
+        )
         await self.session.flush()
+        return cast(CursorResult[Any], result).rowcount == 1
 
     async def revoke(self, auth_session: AuthSession) -> None:
         if auth_session.revoked_at is None:
