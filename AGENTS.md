@@ -52,12 +52,15 @@ Run one API test from `apps/api` with
 
 ## Architecture map
 
+- [`docs/README.md`](docs/README.md) — documentation authority, lifecycle,
+  catalog, and conflict-resolution rules. Read this before treating prose as
+  implementation context.
 - `apps/api/app/` — domain-oriented FastAPI application. Routers handle HTTP,
   services own business logic, and repositories own persistence.
 - `apps/api/tests/` — integration tests using the real app, PostgreSQL, and Redis.
 - `apps/web/` — Next.js workspace console.
-- [`docs/conventions/backend-template.md`](docs/conventions/backend-template.md) —
-  backend structure, optional services, and detailed conventions.
+- [`docs/architecture.md`](docs/architecture.md) — repository and runtime boundaries.
+- [`docs/backend.md`](docs/backend.md) — API, data, authentication, and crawler contracts.
 - [`docs/harness-engineering.md`](docs/harness-engineering.md) — agent Harness
   architecture, ownership, quality status, and promotion triggers.
 

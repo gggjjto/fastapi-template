@@ -90,11 +90,14 @@ make api-test-up
 make api-ci
 ```
 
-Recipes for common project shapes live in [`docs/recipes`](./docs/recipes/README.md).
+Current architecture, contracts, and operating guides live in
+[`docs/`](./docs/README.md).
 
 ## AI workflow
 
-See `.agents/` for mandatory conventions and local AI workflow guidance. Keep changes minimal and behavior-focused, and add tests when behavior changes.
+See `.agents/` for mandatory workflow guidance and [`docs/README.md`](./docs/README.md)
+for documentation authority and lifecycle. Keep changes minimal and
+behavior-focused, and add tests when behavior changes.
 
 ## Contribute
 

@@ -1,3 +1,11 @@
+---
+doc_type: template
+status: active
+authority: normative
+scope: architecture-decisions
+last_reviewed: 2026-08-12
+---
+
 # ADR-NNNN: Title
 
 ## Status
@@ -10,38 +18,38 @@ YYYY-MM-DD
 
 ## Context
 
-What problem, constraint, or trade-off requires a decision?
+What problem, constraint, or expensive trade-off requires a durable decision?
+
+## Decision Drivers
+
+- Driver
+
+## Considered Options
+
+### Option A
+
+- Benefits
+- Costs
+
+### Option B
+
+- Benefits
+- Costs
 
 ## Decision
 
-What are we choosing?
-
-## Alternatives Considered
-
-### Option 1
-
-- Pros:
-- Cons:
-
-### Option 2
-
-- Pros:
-- Cons:
+State the chosen option and its boundary.
 
 ## Consequences
 
 ### Positive
 
-- 
+- Consequence
 
 ### Negative
 
-- 
-
-### Follow-up
-
-- 
+- Consequence
 
 ## References
 
-- 
+- Related code, issue, requirement, or ADR

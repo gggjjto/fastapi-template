@@ -1,25 +1,26 @@
+---
+doc_type: index
+status: active
+authority: normative
+scope: architecture-decisions
+last_reviewed: 2026-08-12
+---
+
 # Architecture Decision Records
 
-This directory contains Architecture Decision Records (ADRs) for decisions that
-shape the project over time.
+ADR 只记录昂贵、长期且需要解释“为什么”的决定。当前实现细节写进代码和测试；活跃需求写进 `.agents/requirements.md`。
 
 ## Index
 
-| ADR | Title | Status | Date |
+| ADR | Decision | Status | Date |
 | --- | --- | --- | --- |
 | [0001](0001-use-agents-as-ai-workflow-source.md) | Use `.agents` as the AI workflow source | Accepted | 2026-06-05 |
+| [0002](0002-documentation-as-a-governed-knowledge-system.md) | Govern documentation as a knowledge system | Accepted | 2026-08-12 |
 
-## Creating a New ADR
+## Lifecycle
 
-1. Copy `template.md` to `NNNN-short-title.md`.
-2. Fill in context, decision, alternatives, and consequences.
-3. Submit it with the change that depends on the decision.
-4. Update this index.
+`Proposed → Accepted → Deprecated or Superseded`
 
-## Status Values
-
-- **Proposed**: Under discussion.
-- **Accepted**: Decision made and active.
-- **Deprecated**: No longer recommended.
-- **Superseded**: Replaced by a newer ADR.
-- **Rejected**: Considered but not adopted.
+- 不修改已接受 ADR 的决定；用新 ADR 替代它。
+- ADR 被替代后更新状态和双向引用。
+- 新 ADR 从 [template.md](template.md) 开始，并加入本索引及 `docs/README.md`。

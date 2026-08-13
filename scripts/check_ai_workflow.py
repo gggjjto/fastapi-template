@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -45,6 +46,8 @@ PORTABLE_HARNESS_PATHS = {
     ".agents/skills/ship-change/SKILL.md",
     "skills-lock.json",
     "docs/harness-engineering.md",
+    "docs/README.md",
+    "docs/adr/0002-documentation-as-a-governed-knowledge-system.md",
     "scripts/check_ai_workflow.py",
     "scripts/eval_ai_workflow.py",
     "scripts/run_harness_evals.py",
@@ -56,6 +59,21 @@ TERMINAL_REQUIREMENT_STATUSES = re.compile(
     re.IGNORECASE,
 )
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+DOC_TYPES = {
+    "adr",
+    "architecture",
+    "convention",
+    "design",
+    "index",
+    "plan",
+    "recipe",
+    "requirements",
+    "runbook",
+    "template",
+}
+DOC_STATUSES = {"active", "draft", "historical", "superseded"}
+DOC_AUTHORITIES = {"normative", "supporting", "reference"}
+DOC_METADATA_FIELDS = ("doc_type", "status", "authority", "scope", "last_reviewed")
 
 
 def _failure(file_name: str, problem: str, remediation: str) -> str:
@@ -120,18 +138,21 @@ def check_required_paths(root: Path = ROOT) -> list[str]:
     ]
 
 
-def _harness_markdown_files(root: Path) -> list[Path]:
+def _governed_markdown_files(root: Path) -> list[Path]:
     candidates = [root / "AGENTS.md", root / ".agents/README.md", root / ".agents/requirements.md"]
     agents_root = root / ".agents"
     if agents_root.exists():
         candidates.extend((agents_root / "rules").glob("*.md"))
         candidates.extend((agents_root / "requirements").glob("*.md"))
+    docs_root = root / "docs"
+    if docs_root.exists():
+        candidates.extend(docs_root.rglob("*.md"))
     return sorted(path for path in candidates if path.is_file())
 
 
 def check_internal_links(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
-    for path in _harness_markdown_files(root):
+    for path in _governed_markdown_files(root):
         content = path.read_text(encoding="utf-8")
         for raw_target in MARKDOWN_LINK.findall(content):
             target = raw_target.strip().strip("<>").split("#", 1)[0]
@@ -212,6 +233,85 @@ def _frontmatter(path: Path) -> dict[str, str]:
             key, value = line.split(":", 1)
             values[key.strip()] = value.strip().strip("'\"")
     return {}
+
+
+def _documentation_files(root: Path) -> list[Path]:
+    docs_root = root / "docs"
+    return sorted(docs_root.rglob("*.md")) if docs_root.exists() else []
+
+
+def check_documentation_contract(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    docs = _documentation_files(root)
+    index_path = root / "docs/README.md"
+    index = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+
+    for path in docs:
+        relative = path.relative_to(root).as_posix()
+        metadata = _frontmatter(path)
+        for field in DOC_METADATA_FIELDS:
+            if not metadata.get(field):
+                failures.append(
+                    _failure(relative, f"documentation field {field!r} is missing", "Add it")
+                )
+
+        doc_type = metadata.get("doc_type")
+        status = metadata.get("status")
+        authority = metadata.get("authority")
+        if doc_type and doc_type not in DOC_TYPES:
+            failures.append(
+                _failure(
+                    relative, f"unknown doc_type {doc_type!r}", "Use the docs/README.md contract"
+                )
+            )
+        if status and status not in DOC_STATUSES:
+            failures.append(
+                _failure(
+                    relative,
+                    f"unknown documentation status {status!r}",
+                    "Use the docs/README.md contract",
+                )
+            )
+        if authority and authority not in DOC_AUTHORITIES:
+            failures.append(
+                _failure(
+                    relative, f"unknown authority {authority!r}", "Use the docs/README.md contract"
+                )
+            )
+        if status and status != "active" and authority == "normative":
+            failures.append(
+                _failure(
+                    relative,
+                    "non-active document is normative",
+                    "Activate it or lower its authority",
+                )
+            )
+        if status in {"historical", "superseded"} and authority not in {None, "reference"}:
+            failures.append(
+                _failure(
+                    relative,
+                    f"{status} document is not reference-only",
+                    "Set authority to reference",
+                )
+            )
+
+        reviewed = metadata.get("last_reviewed")
+        if reviewed:
+            try:
+                date.fromisoformat(reviewed)
+            except ValueError:
+                failures.append(
+                    _failure(relative, f"invalid last_reviewed date {reviewed!r}", "Use YYYY-MM-DD")
+                )
+
+        if path != index_path:
+            catalog_target = path.relative_to(index_path.parent).as_posix()
+            if f"({catalog_target})" not in index:
+                failures.append(
+                    _failure(relative, "is not listed in docs/README.md", "Add one catalog entry")
+                )
+
+    return failures
 
 
 def check_skill_shape(root: Path = ROOT) -> list[str]:
@@ -343,6 +443,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
         check_internal_links,
         check_index_coverage,
         check_active_requirements,
+        check_documentation_contract,
         check_skill_shape,
         check_import_boundaries,
     ):

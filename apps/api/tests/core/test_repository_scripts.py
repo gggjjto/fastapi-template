@@ -28,6 +28,11 @@ def _minimal_harness(root: Path) -> ModuleType:
     guard = _load_script("check_ai_workflow")
     for relative in guard.REQUIRED_PATHS:
         content = ""
+        if relative.startswith("docs/") and relative.endswith(".md"):
+            content = (
+                "---\ndoc_type: index\nstatus: active\nauthority: supporting\n"
+                "scope: test\nlast_reviewed: 2026-08-12\n---\n"
+            )
         if relative.endswith("/SKILL.md"):
             name = Path(relative).parent.name
             content = f"---\nname: {name}\ndescription: test workflow\n---\n"
@@ -85,6 +90,34 @@ def test_harness_guard_skill_shape(tmp_path: Path) -> None:
     failures = guard.check_skill_shape(tmp_path)
     assert any("description" in failure for failure in failures)
     assert any("does not match" in failure for failure in failures)
+
+
+def test_harness_guard_documentation_contract(tmp_path: Path) -> None:
+    guard = _minimal_harness(tmp_path)
+    _write(
+        tmp_path / "docs/README.md",
+        "---\ndoc_type: index\nstatus: active\nauthority: normative\n"
+        "scope: docs\nlast_reviewed: 2026-08-12\n---\n"
+        "[ADR](adr/0002-documentation-as-a-governed-knowledge-system.md)\n"
+        "[Harness](harness-engineering.md)\n"
+        "[Guide](guide.md)\n",
+    )
+    _write(
+        tmp_path / "docs/guide.md",
+        "---\ndoc_type: runbook\nstatus: active\nauthority: supporting\n"
+        "scope: test\nlast_reviewed: 2026-08-12\n---\n",
+    )
+
+    assert guard.check_documentation_contract(tmp_path) == []
+
+    _write(
+        tmp_path / "docs/guide.md",
+        "---\ndoc_type: runbook\nstatus: historical\nauthority: normative\n"
+        "scope: test\nlast_reviewed: yesterday\n---\n",
+    )
+    failures = guard.check_documentation_contract(tmp_path)
+    assert any("non-active document is normative" in failure for failure in failures)
+    assert any("invalid last_reviewed date" in failure for failure in failures)
 
 
 def test_harness_guard_import_boundaries(tmp_path: Path) -> None:
