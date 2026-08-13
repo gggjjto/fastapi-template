@@ -1,14 +1,14 @@
 const tracks = [
   { name: "API", status: "ready", command: "make api-ci", accent: "bg-emerald-500" },
   { name: "Web", status: "active", command: "pnpm --filter @rapid-template/web dev", accent: "bg-sky-500" },
-  { name: "Templates", status: "ready", command: "make create-project", accent: "bg-violet-500" },
+  { name: "Harness", status: "ready", command: "make harness-check", accent: "bg-violet-500" },
   { name: "Turbo", status: "active", command: "pnpm lint", accent: "bg-amber-500" },
 ];
 
 const checks = [
   ["API quality", "Integration tests", "Coverage gate"],
   ["Web quality", "ESLint", "TypeScript"],
-  ["Generator", "Manifest", "Smoke test"],
+  ["Harness", "Workflow guard", "Evaluations"],
   ["Workspace", "pnpm", "Turborepo"],
 ];
 
@@ -50,12 +50,12 @@ export default function Home() {
                 workspace state
               </p>
               <h2 className="mt-4 max-w-2xl text-4xl font-semibold leading-tight md:text-6xl">
-                API, web, generator, and orchestration in one repo.
+                API, web, quality gates, and orchestration in one repo.
               </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-2 self-end">
-              {["apps/api", "apps/web", "templates", "turbo"].map((item) => (
+              {["apps/api", "apps/web", ".agents", "turbo"].map((item) => (
                 <div
                   key={item}
                   className="flex aspect-square items-end border border-black/10 bg-background p-3 font-mono text-xs dark:border-white/10"

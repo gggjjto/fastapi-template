@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import shutil
 import subprocess
@@ -9,11 +8,10 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = ROOT / "apps" / "api"
-TEMPLATES_ROOT = ROOT / "templates"
+REQUIRED_TOOLS = ("python>=3.12", "uv", "docker")
 
 
 @dataclass(frozen=True)
@@ -23,13 +21,7 @@ class CheckResult:
     detail: str
 
 
-@dataclass(frozen=True)
-class DoctorProfile:
-    template_id: str
-    required_tools: list[str]
-
-
-def _run(command: Sequence[str], *, cwd: Path = ROOT) -> Optional[subprocess.CompletedProcess[str]]:
+def _run(command: Sequence[str], *, cwd: Path = ROOT) -> subprocess.CompletedProcess[str] | None:
     try:
         return subprocess.run(
             command,
@@ -51,7 +43,7 @@ def check_python() -> CheckResult:
                 "run",
                 "python",
                 "-c",
-                "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')",
+                "import sys; v=sys.version_info; print(f'{v.major}.{v.minor}.{v.micro}')",
             ],
             cwd=API_ROOT,
         )
@@ -97,7 +89,9 @@ def check_env_file() -> CheckResult:
     if env_file.exists():
         return CheckResult("apps/api/.env", True, ".env exists")
     if example.exists():
-        return CheckResult("apps/api/.env", False, "missing; copy apps/api/.env.example to apps/api/.env")
+        return CheckResult(
+            "apps/api/.env", False, "missing; copy apps/api/.env.example to apps/api/.env"
+        )
     return CheckResult("apps/api/.env", False, "missing; apps/api/.env.example also missing")
 
 
@@ -127,28 +121,6 @@ def check_docker_compose() -> CheckResult:
     return CheckResult("docker compose", result.returncode == 0, detail)
 
 
-def list_template_ids(*, root: Path = TEMPLATES_ROOT) -> list[str]:
-    if not root.exists():
-        return []
-    return sorted(path.name for path in root.iterdir() if (path / "template.json").exists())
-
-
-def load_doctor_profile(template_id: str, *, root: Path = TEMPLATES_ROOT) -> DoctorProfile:
-    manifest_path = root / template_id / "template.json"
-    if not manifest_path.exists():
-        raise ValueError(f"Unknown template: {template_id}")
-
-    try:
-        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Invalid template manifest JSON: {manifest_path}") from exc
-
-    return DoctorProfile(
-        template_id=template_id,
-        required_tools=[str(tool) for tool in raw.get("required_tools", [])],
-    )
-
-
 def collect_tool_checks(required_tools: Sequence[str]) -> list[CheckResult]:
     checks: list[CheckResult] = []
     for tool in required_tools:
@@ -163,10 +135,9 @@ def collect_tool_checks(required_tools: Sequence[str]) -> list[CheckResult]:
     return checks
 
 
-def collect_checks(template_id: str = "fastapi-api") -> list[CheckResult]:
-    profile = load_doctor_profile(template_id)
+def collect_checks() -> list[CheckResult]:
     return [
-        *collect_tool_checks(profile.required_tools),
+        *collect_tool_checks(REQUIRED_TOOLS),
         check_api_root(),
         check_env_file(),
         check_env_var("APP_DATABASE_URL"),
@@ -175,25 +146,16 @@ def collect_checks(template_id: str = "fastapi-api") -> list[CheckResult]:
     ]
 
 
-def render_results(results: Sequence[CheckResult], *, template_id: Optional[str] = None) -> str:
-    title = "Development environment check"
-    if template_id:
-        title = f"{title} ({template_id})"
-    lines = [f"{title}:"]
+def render_results(results: Sequence[CheckResult]) -> str:
+    lines = ["Development environment check:"]
     for result in results:
         marker = "OK" if result.ok else "FAIL"
         lines.append(f"- [{marker}] {result.name}: {result.detail}")
     return "\n".join(lines)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check local development prerequisites.")
-    parser.add_argument(
-        "--template",
-        default="fastapi-api",
-        choices=list_template_ids() or ["fastapi-api"],
-        help="Template profile to check.",
-    )
     parser.add_argument(
         "--strict",
         action="store_true",
@@ -201,8 +163,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    results = collect_checks(args.template)
-    print(render_results(results, template_id=args.template))
+    results = collect_checks()
+    print(render_results(results))
 
     if args.strict and any(not result.ok for result in results):
         return 1

@@ -13,6 +13,10 @@ Use this order:
 3. Update the smallest relevant document.
 4. If no document change is needed, mention why in the final response.
 
+Start at `docs/README.md`. Classify the document before editing it; do not add
+current requirements to historical designs or turn supporting recipes into
+normative architecture.
+
 ## What to update
 
 - `README.md`: setup, features, API examples, config, Docker, CI/CD, troubleshooting.
@@ -21,6 +25,11 @@ Use this order:
 - `CONTRIBUTING.md`: local checks, PR process, review expectations.
 - `SECURITY.md`: vulnerability reporting, supported versions, security expectations.
 - `.github/pull_request_template.md`: PR self-checks that should happen every time.
+- `docs/README.md`: documentation catalog, authority, lifecycle, and scope.
+- `docs/adr/`: durable decisions and their consequences; accepted ADRs are immutable.
+- `docs/architecture.md`: repository and runtime boundaries.
+- `docs/backend.md` and `docs/frontend.md`: active product conventions.
+- `docs/development.md` and `docs/operations.md`: supporting runbooks.
 
 ## Triggers
 
@@ -37,4 +46,11 @@ Update docs when changing:
 - Keep docs concise and factual; do not duplicate long content across files.
 - Prefer linking to the source file over copying implementation details.
 - Do not document speculative features as already implemented.
+- Treat code, tests, migrations, and configuration as authority for current behavior.
+- Put active implementation intent in `.agents/requirements.md`.
+- Every `docs/**/*.md` file must satisfy the metadata and catalog contract in
+  `docs/README.md`; run `make harness-check` after documentation changes.
+- Mark completed plans and stale snapshots `historical`; they are context, not input
+  to current implementation decisions.
+- Supersede an accepted ADR with a new ADR instead of editing its decision.
 - Do not update changelogs unless the user asks for release notes or changelog output.
