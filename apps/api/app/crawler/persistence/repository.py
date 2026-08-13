@@ -6,7 +6,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
-import structlog
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,8 +17,6 @@ from app.crawler.domain.constants import (
 )
 from app.crawler.domain.models import CrawlJob, CrawlTarget
 
-logger = structlog.get_logger(__name__)
-
 
 @dataclass(frozen=True, slots=True)
 class LeasedCrawlJob:
@@ -29,6 +26,21 @@ class LeasedCrawlJob:
     target_host: str
     handler_name: str
     dispatch_attempts: int
+
+
+@dataclass(frozen=True, slots=True)
+class ExhaustedDispatchJob:
+    id: uuid.UUID
+    handler_name: str
+    target_host: str
+    dispatch_attempts: int
+    job_age_ms: float
+
+
+@dataclass(frozen=True, slots=True)
+class DispatchLeaseBatch:
+    leased: list[LeasedCrawlJob]
+    exhausted: list[ExhaustedDispatchJob]
 
 
 class CrawlerRepository:
@@ -91,7 +103,7 @@ class CrawlerRepository:
         await self.session.flush()
         return job
 
-    async def lease_pending_jobs(self, *, limit: int, lease_seconds: int) -> list[LeasedCrawlJob]:
+    async def lease_pending_jobs(self, *, limit: int, lease_seconds: int) -> DispatchLeaseBatch:
         now = datetime.now(UTC)
         eligible = or_(
             CrawlJob.dispatch_state == CrawlDispatchState.PENDING,
@@ -115,6 +127,7 @@ class CrawlerRepository:
         ).all()
         leased_until = now + timedelta(seconds=lease_seconds)
         leased: list[LeasedCrawlJob] = []
+        exhausted: list[ExhaustedDispatchJob] = []
         for job, target in rows:
             if job.dispatch_attempts >= MAX_DISPATCH_ATTEMPTS:
                 finished_at = datetime.now(UTC)
@@ -123,18 +136,15 @@ class CrawlerRepository:
                 job.error_category = CrawlErrorCategory.TRANSIENT
                 job.error_code = "DISPATCH_LEASE_EXHAUSTED"
                 job.error_message = "Crawler dispatch lease expired after maximum attempts"
-                job.dispatch_lease_until = None
-                job.next_dispatch_at = None
-                job.finished_at = finished_at
-                logger.error(
-                    "crawler.job.failed",
-                    crawl_job_id=str(job.id),
-                    handler_name=target.handler_name,
-                    target_host=target.target_host,
-                    dispatch_attempt=job.dispatch_attempts,
-                    duration_ms=_duration_ms(job.created_at, finished_at),
-                    error_category=CrawlErrorCategory.TRANSIENT,
-                    error_code="DISPATCH_LEASE_EXHAUSTED",
+                self._finish_job(job, finished_at=finished_at)
+                exhausted.append(
+                    ExhaustedDispatchJob(
+                        id=job.id,
+                        handler_name=target.handler_name,
+                        target_host=target.target_host,
+                        dispatch_attempts=job.dispatch_attempts,
+                        job_age_ms=_duration_ms(job.created_at, finished_at),
+                    )
                 )
                 continue
             job.dispatch_state = CrawlDispatchState.LEASED
@@ -151,23 +161,21 @@ class CrawlerRepository:
                 )
             )
         await self.session.flush()
-        return leased
+        return DispatchLeaseBatch(leased=leased, exhausted=exhausted)
 
     async def mark_dispatched(
         self, *, job_id: uuid.UUID, tenant_id: uuid.UUID, hatchet_run_id: str
-    ) -> bool:
+    ) -> CrawlJob | None:
         job = await self._get_job(job_id=job_id, tenant_id=tenant_id)
         if job is None:
-            return False
+            return None
         if job.hatchet_run_id and job.hatchet_run_id != hatchet_run_id:
-            finished_at = datetime.now(UTC)
             job.dispatch_state = CrawlDispatchState.FAILED
             job.status = CrawlJobStatus.FAILED
             job.error_category = CrawlErrorCategory.PERMANENT
             job.error_code = "HATCHET_RUN_ID_CONFLICT"
-            job.dispatch_lease_until = None
-            job.finished_at = finished_at
-            return False
+            self._finish_job(job)
+            return job
         dispatched_at = datetime.now(UTC)
         job.hatchet_run_id = hatchet_run_id
         job.dispatch_state = CrawlDispatchState.DISPATCHED
@@ -176,28 +184,28 @@ class CrawlerRepository:
         job.next_dispatch_at = None
         if job.dispatched_at is None:
             job.dispatched_at = dispatched_at
-        return True
+        return job
 
     async def record_dispatch_failure(
         self, *, job_id: uuid.UUID, tenant_id: uuid.UUID, error: str
-    ) -> bool:
+    ) -> CrawlJob | None:
         job = await self._get_job(job_id=job_id, tenant_id=tenant_id)
         if job is None:
-            return False
+            return None
         job.error_category = CrawlErrorCategory.TRANSIENT
         job.error_code = "DISPATCH_FAILED"
         job.error_message = error[:2000]
         job.dispatch_lease_until = None
         if job.dispatch_attempts >= MAX_DISPATCH_ATTEMPTS:
-            job.finished_at = datetime.now(UTC)
             job.dispatch_state = CrawlDispatchState.FAILED
             job.status = CrawlJobStatus.FAILED
-            return True
+            self._finish_job(job)
+            return job
         job.dispatch_state = CrawlDispatchState.PENDING
         job.status = CrawlJobStatus.PENDING
         delay = min(5 * 2 ** (job.dispatch_attempts - 1), 300)
         job.next_dispatch_at = datetime.now(UTC) + timedelta(seconds=delay)
-        return False
+        return job
 
     async def load_for_execution(
         self,
@@ -239,7 +247,7 @@ class CrawlerRepository:
     async def mark_succeeded(self, job: CrawlJob, *, result: dict[str, Any]) -> None:
         job.status = CrawlJobStatus.SUCCEEDED
         job.result = result
-        job.finished_at = datetime.now(UTC)
+        self._finish_job(job)
         await self.session.commit()
 
     async def mark_failed(
@@ -253,8 +261,14 @@ class CrawlerRepository:
         job.error_category = category
         job.error_code = error.__class__.__name__
         job.error_message = str(error)[:2000]
-        job.finished_at = datetime.now(UTC)
+        self._finish_job(job)
         await self.session.commit()
+
+    @staticmethod
+    def _finish_job(job: CrawlJob, *, finished_at: datetime | None = None) -> None:
+        job.dispatch_lease_until = None
+        job.next_dispatch_at = None
+        job.finished_at = finished_at or datetime.now(UTC)
 
     async def _get_job(self, *, job_id: uuid.UUID, tenant_id: uuid.UUID) -> CrawlJob | None:
         result = await self.session.execute(

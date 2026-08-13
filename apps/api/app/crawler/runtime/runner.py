@@ -82,7 +82,7 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
             "target_host": target.target_host,
             "attempt": attempt_count,
         }
-        logger.info("crawler.job.started", **log_context)
+        logger.info("crawler.execution.started", **log_context)
         try:
             if task_input.target_host != target.target_host:
                 raise PermanentCrawlerError("crawler task host does not match the stored target")
@@ -98,7 +98,7 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
             if retryable and attempt_count < MAX_EXECUTION_ATTEMPTS:
                 await repository.mark_retrying(job, error=exc)
                 logger.warning(
-                    "crawler.job.retrying",
+                    "crawler.execution.retrying",
                     **log_context,
                     duration_ms=round((time.perf_counter() - start) * 1000, 2),
                     error_category=CrawlErrorCategory.TRANSIENT,
@@ -108,7 +108,7 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
             category = CrawlErrorCategory.TRANSIENT if retryable else _error_category(exc)
             await repository.mark_failed(job, error=exc, category=category)
             logger.error(
-                "crawler.job.failed",
+                "crawler.execution.failed",
                 **log_context,
                 duration_ms=round((time.perf_counter() - start) * 1000, 2),
                 error_category=category,
@@ -120,7 +120,7 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
 
         await repository.mark_succeeded(job, result=result)
         logger.info(
-            "crawler.job.succeeded",
+            "crawler.execution.succeeded",
             **log_context,
             duration_ms=round((time.perf_counter() - start) * 1000, 2),
         )

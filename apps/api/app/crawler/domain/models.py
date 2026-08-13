@@ -74,6 +74,7 @@ class CrawlJob(Base):
         Index(
             "ix_crawl_jobs_dispatch", "dispatch_state", "next_dispatch_at", "dispatch_lease_until"
         ),
+        Index("ix_crawl_jobs_finished_at", "finished_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)

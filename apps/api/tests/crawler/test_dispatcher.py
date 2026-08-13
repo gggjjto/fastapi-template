@@ -8,37 +8,70 @@ from uuid import uuid4
 import pytest
 from hatchet_sdk.exceptions import IdempotencyCollisionError
 
-from app.crawler.persistence.repository import LeasedCrawlJob
+from app.crawler.domain.constants import CrawlDispatchState, CrawlJobStatus
+from app.crawler.persistence.repository import (
+    DispatchLeaseBatch,
+    ExhaustedDispatchJob,
+    LeasedCrawlJob,
+)
 from app.crawler.runtime import dispatcher
 from app.crawler.runtime.dispatcher import dispatch_once
 
 
 class FakeSession:
-    def __init__(self) -> None:
+    def __init__(self, *, fail_commit: bool = False) -> None:
         self.commits = 0
+        self.fail_commit = fail_commit
 
     async def commit(self) -> None:
         self.commits += 1
+        if self.fail_commit:
+            raise RuntimeError("commit failed")
 
 
 class FakeRepository:
-    def __init__(self, *, terminal_failure: bool = False) -> None:
-        self.session = FakeSession()
+    def __init__(
+        self,
+        *,
+        terminal_failure: bool = False,
+        exhausted: bool = False,
+        fail_commit: bool = False,
+    ) -> None:
+        self.session = FakeSession(fail_commit=fail_commit)
         self.job = LeasedCrawlJob(uuid4(), uuid4(), uuid4(), "example.com", "example", 1)
         self.dispatched: list[str] = []
         self.failures: list[str] = []
         self.terminal_failure = terminal_failure
+        self.exhausted = exhausted
 
-    async def lease_pending_jobs(self, *, limit: int, lease_seconds: int) -> list[LeasedCrawlJob]:
-        return [self.job]
+    async def lease_pending_jobs(self, *, limit: int, lease_seconds: int) -> DispatchLeaseBatch:
+        exhausted = (
+            [
+                ExhaustedDispatchJob(
+                    self.job.id,
+                    self.job.handler_name,
+                    self.job.target_host,
+                    self.job.dispatch_attempts,
+                    1000.0,
+                )
+            ]
+            if self.exhausted
+            else []
+        )
+        return DispatchLeaseBatch(leased=[] if exhausted else [self.job], exhausted=exhausted)
 
-    async def mark_dispatched(self, **kwargs: Any) -> bool:
+    async def mark_dispatched(self, **kwargs: Any) -> object:
         self.dispatched.append(str(kwargs["hatchet_run_id"]))
-        return True
+        return SimpleNamespace(
+            dispatch_state=CrawlDispatchState.DISPATCHED,
+            status=CrawlJobStatus.QUEUED,
+        )
 
-    async def record_dispatch_failure(self, **kwargs: Any) -> bool:
+    async def record_dispatch_failure(self, **kwargs: Any) -> object:
         self.failures.append(str(kwargs["error"]))
-        return self.terminal_failure
+        return SimpleNamespace(
+            status=CrawlJobStatus.FAILED if self.terminal_failure else CrawlJobStatus.PENDING
+        )
 
 
 class FakeTask:
@@ -110,13 +143,13 @@ async def test_dispatch_logs_dispatched_job(monkeypatch: pytest.MonkeyPatch) -> 
     )
 
     event, fields = logger.infos[0]
-    assert event == "crawler.job.dispatched"
+    assert event == "crawler.dispatch.succeeded"
     assert fields == {
         "crawl_job_id": str(repository.job.id),
         "hatchet_run_id": "run-1",
         "handler_name": "example",
         "target_host": "example.com",
-        "dispatch_attempt": 1,
+        "attempt": 1,
         "duration_ms": fields["duration_ms"],
     }
     assert isinstance(fields["duration_ms"], float)
@@ -155,15 +188,60 @@ async def test_dispatch_logs_failed_after_retry_exhaustion(
     monkeypatch.setattr(dispatcher, "logger", logger)
     repository = FakeRepository(terminal_failure=True)
 
-    await dispatch_once(  # type: ignore[arg-type]
-        repository=repository,
+    await dispatch_once(
+        repository=repository,  # type: ignore[arg-type]
         task=FakeTask(RuntimeError("secret upstream response")),
     )
 
     event, fields = logger.errors[0]
-    assert event == "crawler.job.failed"
+    assert event == "crawler.dispatch.failed"
     assert fields["error_code"] == "DISPATCH_FAILED"
     assert "secret" not in str(fields)
+
+
+async def test_exhausted_dispatch_log_waits_for_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = FakeLogger()
+    monkeypatch.setattr(dispatcher, "logger", logger)
+    repository = FakeRepository(exhausted=True, fail_commit=True)
+
+    with pytest.raises(RuntimeError, match="commit failed"):
+        await dispatch_once(
+            repository=repository,  # type: ignore[arg-type]
+            task=FakeTask(None),
+        )
+
+    assert logger.errors == []
+
+
+async def test_exhausted_dispatch_logs_distinct_duration_semantics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = FakeLogger()
+    monkeypatch.setattr(dispatcher, "logger", logger)
+    repository = FakeRepository(exhausted=True)
+
+    count = await dispatch_once(
+        repository=repository,  # type: ignore[arg-type]
+        task=FakeTask(None),
+    )
+
+    assert count == 0
+    assert logger.errors == [
+        (
+            "crawler.dispatch.lease_exhausted",
+            {
+                "crawl_job_id": str(repository.job.id),
+                "handler_name": "example",
+                "target_host": "example.com",
+                "attempt": 1,
+                "job_age_ms": 1000.0,
+                "error_category": "transient",
+                "error_code": "DISPATCH_LEASE_EXHAUSTED",
+            },
+        )
+    ]
 
 
 async def test_dispatcher_repeats_after_idle_interval(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -126,9 +126,9 @@ async def test_expired_lease_can_be_reclaimed() -> None:
         )
         await session.commit()
 
-        first = await repository.lease_pending_jobs(limit=1, lease_seconds=-1)
+        first = (await repository.lease_pending_jobs(limit=1, lease_seconds=-1)).leased
         await session.commit()
-        second = await repository.lease_pending_jobs(limit=1, lease_seconds=60)
+        second = (await repository.lease_pending_jobs(limit=1, lease_seconds=60)).leased
 
     assert first[0].id == job.id
     assert second[0].id == job.id
@@ -154,7 +154,7 @@ async def test_expired_final_lease_marks_job_failed() -> None:
         await session.commit()
 
         for attempt in range(1, MAX_DISPATCH_ATTEMPTS + 1):
-            leased = await repository.lease_pending_jobs(limit=1, lease_seconds=-1)
+            leased = (await repository.lease_pending_jobs(limit=1, lease_seconds=-1)).leased
             assert leased[0].dispatch_attempts == attempt
             await session.commit()
 
@@ -162,7 +162,8 @@ async def test_expired_final_lease_marks_job_failed() -> None:
         await session.commit()
         await session.refresh(job)
 
-    assert exhausted == []
+    assert exhausted.leased == []
+    assert len(exhausted.exhausted) == 1
     assert job.dispatch_attempts == MAX_DISPATCH_ATTEMPTS
     assert job.dispatch_state == CrawlDispatchState.FAILED
     assert job.status == CrawlJobStatus.FAILED
@@ -185,7 +186,7 @@ async def test_mark_dispatched_sets_dispatched_at() -> None:
         await session.commit()
         await session.refresh(job)
 
-    assert marked is True
+    assert marked is job
     assert job.dispatched_at is not None
 
 
@@ -209,17 +210,23 @@ async def test_mark_succeeded_sets_finished_at() -> None:
     async with AsyncSessionLocal() as session:
         repository = CrawlerRepository(session)
         job = await _create_job(repository)
+        job.dispatch_lease_until = datetime.now(UTC) + timedelta(minutes=1)
+        job.next_dispatch_at = datetime.now(UTC) + timedelta(minutes=1)
 
         await repository.mark_succeeded(job, result={"ok": True})
         await session.refresh(job)
 
     assert job.finished_at is not None
+    assert job.dispatch_lease_until is None
+    assert job.next_dispatch_at is None
 
 
 async def test_mark_failed_sets_finished_at() -> None:
     async with AsyncSessionLocal() as session:
         repository = CrawlerRepository(session)
         job = await _create_job(repository)
+        job.dispatch_lease_until = datetime.now(UTC) + timedelta(minutes=1)
+        job.next_dispatch_at = datetime.now(UTC) + timedelta(minutes=1)
 
         await repository.mark_failed(
             job,
@@ -229,6 +236,8 @@ async def test_mark_failed_sets_finished_at() -> None:
         await session.refresh(job)
 
     assert job.finished_at is not None
+    assert job.dispatch_lease_until is None
+    assert job.next_dispatch_at is None
 
 
 async def test_final_dispatch_failure_sets_finished_at() -> None:
@@ -236,6 +245,8 @@ async def test_final_dispatch_failure_sets_finished_at() -> None:
         repository = CrawlerRepository(session)
         job = await _create_job(repository)
         job.dispatch_attempts = MAX_DISPATCH_ATTEMPTS
+        job.dispatch_lease_until = datetime.now(UTC) + timedelta(minutes=1)
+        job.next_dispatch_at = datetime.now(UTC) + timedelta(minutes=1)
 
         await repository.record_dispatch_failure(
             job_id=job.id,
@@ -247,6 +258,8 @@ async def test_final_dispatch_failure_sets_finished_at() -> None:
 
     assert job.status == CrawlJobStatus.FAILED
     assert job.finished_at is not None
+    assert job.dispatch_lease_until is None
+    assert job.next_dispatch_at is None
 
 
 async def test_dispatch_run_id_conflict_sets_finished_at() -> None:
@@ -254,6 +267,8 @@ async def test_dispatch_run_id_conflict_sets_finished_at() -> None:
         repository = CrawlerRepository(session)
         job = await _create_job(repository)
         job.hatchet_run_id = "run-1"
+        job.dispatch_lease_until = datetime.now(UTC) + timedelta(minutes=1)
+        job.next_dispatch_at = datetime.now(UTC) + timedelta(minutes=1)
         await session.commit()
 
         marked = await repository.mark_dispatched(
@@ -264,9 +279,11 @@ async def test_dispatch_run_id_conflict_sets_finished_at() -> None:
         await session.commit()
         await session.refresh(job)
 
-    assert marked is False
+    assert marked is job
     assert job.status == CrawlJobStatus.FAILED
     assert job.finished_at is not None
+    assert job.dispatch_lease_until is None
+    assert job.next_dispatch_at is None
 
 
 async def test_expired_final_lease_sets_finished_at() -> None:
@@ -282,6 +299,9 @@ async def test_expired_final_lease_sets_finished_at() -> None:
         await session.commit()
         await session.refresh(job)
 
-    assert leased == []
+    assert leased.leased == []
+    assert len(leased.exhausted) == 1
     assert job.status == CrawlJobStatus.FAILED
     assert job.finished_at is not None
+    assert job.dispatch_lease_until is None
+    assert job.next_dispatch_at is None

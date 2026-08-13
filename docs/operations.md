@@ -59,7 +59,24 @@ make api-docker-run
 
 ## Crawler 可诊断查询
 
-`crawl_jobs` 的 `dispatched_at`、`started_at`、`finished_at` 分别记录首次派发、首次执行和进入终态的时间。以下 PostgreSQL 查询可直接接入所选监控平台；阈值应按实际抓取周期调整。
+`crawl_jobs` 的 `dispatched_at`、`started_at`、`finished_at` 分别记录首次派发、首次执行和进入终态的时间。`finished_at` 有独立索引，支持以下按完成时间窗口过滤的 PostgreSQL 查询；阈值应按实际抓取周期调整。
+
+生命周期日志按阶段使用不同事件名，避免把派发耗时、执行耗时和任务存活时间混为同一指标：
+
+| 事件 | 含义 | 时长字段 |
+| --- | --- | --- |
+| `crawler.job.created` | 任务事务已提交 | 无 |
+| `crawler.dispatch.succeeded` | 本次 Hatchet 提交已持久化 | `duration_ms`：本次提交耗时 |
+| `crawler.dispatch.retrying` | 本次提交失败，重试状态已持久化 | `duration_ms`：本次提交耗时 |
+| `crawler.dispatch.failed` | 本次提交进入终态失败且已持久化 | `duration_ms`：本次提交耗时 |
+| `crawler.dispatch.lease_exhausted` | 最终租约过期且终态已持久化 | `job_age_ms`：创建到终态的总时长 |
+| `crawler.dispatch.missing` | 已租用任务在提交结果时不存在 | `duration_ms`：本次提交耗时 |
+| `crawler.execution.started` | 执行尝试已标记为运行中 | 无 |
+| `crawler.execution.retrying` | 本次执行进入重试且已持久化 | `duration_ms`：本次执行尝试耗时 |
+| `crawler.execution.succeeded` | 本次执行成功且已持久化 | `duration_ms`：本次执行尝试耗时 |
+| `crawler.execution.failed` | 本次执行进入终态失败且已持久化 | `duration_ms`：本次执行尝试耗时 |
+
+所有带 `attempt` 的事件都表示所属阶段的当前尝试次数；公共维度为 `crawl_job_id`、`handler_name` 和 `target_host`。终态日志只在对应事务提交成功后发出。
 
 ```sql
 -- 当前状态分布

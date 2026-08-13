@@ -168,7 +168,7 @@ async def test_runner_logs_started_job(monkeypatch: pytest.MonkeyPatch) -> None:
         SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
     )
 
-    assert _logged_event(logger, "crawler.job.started") == {
+    assert _logged_event(logger, "crawler.execution.started") == {
         "crawl_job_id": str(task_input.crawl_job_id),
         "hatchet_run_id": None,
         "handler_name": "html",
@@ -190,7 +190,7 @@ async def test_runner_logs_succeeded_job_without_raw_target_url(
         SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
     )
 
-    fields = _logged_event(logger, "crawler.job.succeeded")
+    fields = _logged_event(logger, "crawler.execution.succeeded")
     assert fields == {
         "crawl_job_id": str(task_input.crawl_job_id),
         "hatchet_run_id": None,
@@ -241,7 +241,7 @@ async def test_runner_logs_retrying_job(monkeypatch: pytest.MonkeyPatch) -> None
             SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
         )
 
-    fields = _logged_event(logger, "crawler.job.retrying")
+    fields = _logged_event(logger, "crawler.execution.retrying")
     assert fields == {
         "crawl_job_id": str(task_input.crawl_job_id),
         "hatchet_run_id": None,
@@ -285,7 +285,7 @@ async def test_runner_logs_failed_job(monkeypatch: pytest.MonkeyPatch) -> None:
             SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
         )
 
-    fields = _logged_event(logger, "crawler.job.failed")
+    fields = _logged_event(logger, "crawler.execution.failed")
     assert fields == {
         "crawl_job_id": str(task_input.crawl_job_id),
         "hatchet_run_id": None,
