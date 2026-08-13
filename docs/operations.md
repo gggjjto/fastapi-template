@@ -56,3 +56,66 @@ make api-docker-run
 - 显式配置 PostgreSQL、CORS、JWT secret 和 JSON 日志。
 - Redis 与 Sentry 是可选能力；未配置时必须保持应用可运行。
 - 回滚前确认 migration 是否可安全 downgrade；数据库变更优先采用兼容的 expand/contract 顺序。
+
+## Crawler 可诊断查询
+
+`crawl_jobs` 的 `dispatched_at`、`started_at`、`finished_at` 分别记录首次派发、首次执行和进入终态的时间。以下 PostgreSQL 查询可直接接入所选监控平台；阈值应按实际抓取周期调整。
+
+```sql
+-- 当前状态分布
+SELECT status, dispatch_state, count(*) AS jobs
+FROM crawl_jobs
+GROUP BY status, dispatch_state
+ORDER BY status, dispatch_state;
+
+-- pending / queued 中最老任务的等待时间
+SELECT status, count(*) AS jobs, now() - min(created_at) AS oldest_age
+FROM crawl_jobs
+WHERE status IN ('pending', 'queued')
+GROUP BY status;
+
+-- 超过五分钟仍在执行的任务
+SELECT id, tenant_id, started_at, now() - started_at AS running_for
+FROM crawl_jobs
+WHERE status = 'running' AND started_at < now() - interval '5 minutes'
+ORDER BY started_at;
+
+-- 最近一小时成功率
+SELECT
+  count(*) FILTER (WHERE status = 'succeeded') AS succeeded,
+  count(*) FILTER (WHERE status = 'failed') AS failed,
+  round(
+    100.0 * count(*) FILTER (WHERE status = 'succeeded') / NULLIF(count(*), 0),
+    2
+  ) AS success_percent
+FROM crawl_jobs
+WHERE finished_at >= now() - interval '1 hour';
+
+-- 最近一小时失败分类
+SELECT error_category, error_code, count(*) AS failures
+FROM crawl_jobs
+WHERE status = 'failed' AND finished_at >= now() - interval '1 hour'
+GROUP BY error_category, error_code;
+
+-- 按 handler / host 统计最近一小时失败率
+SELECT
+  target.handler_name,
+  target.target_host,
+  count(*) AS finished,
+  round(100.0 * count(*) FILTER (WHERE job.status = 'failed') / count(*), 2) AS failure_percent
+FROM crawl_jobs AS job
+JOIN crawl_targets AS target ON target.id = job.crawl_target_id
+WHERE job.finished_at >= now() - interval '1 hour'
+GROUP BY target.handler_name, target.target_host;
+
+-- 最近一小时 P95 调度、排队、执行和端到端耗时（秒）
+SELECT
+  percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM dispatched_at - created_at)) AS dispatch_p95,
+  percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM started_at - dispatched_at)) AS queue_p95,
+  percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM finished_at - started_at)) AS execution_p95,
+  percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM finished_at - created_at)) AS total_p95
+FROM crawl_jobs
+WHERE finished_at >= now() - interval '1 hour';
+```
+
+业务 handler 应自行记录 `fetched`、`parsed`、`stored`、`rejected` 等计数，用于发现 HTTP 成功但数据为空或解析退化的情况。模板不约束 result 结构，也不判断具体业务数据质量。

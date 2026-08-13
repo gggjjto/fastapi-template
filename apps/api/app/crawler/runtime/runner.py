@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import timedelta
 from typing import Any
 
+import structlog
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.exceptions import NonRetryableException
 from hatchet_sdk.types.concurrency import ConcurrencyExpression, ConcurrencyLimitStrategy
@@ -22,6 +24,8 @@ from app.crawler.network.http_client import SafeAsyncCrawlerClient
 from app.crawler.persistence.repository import CrawlerRepository
 from app.crawler.runtime.registry import registry
 from app.db.session import AsyncSessionLocal
+
+logger = structlog.get_logger(__name__)
 
 
 def create_crawl_task(hatchet: Hatchet) -> Any:
@@ -69,7 +73,16 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
             return job.result
 
         attempt_count = int(context.attempt_number)
+        start = time.perf_counter()
         await repository.mark_running(job, attempt_count=attempt_count)
+        log_context = {
+            "crawl_job_id": str(job.id),
+            "hatchet_run_id": job.hatchet_run_id,
+            "handler_name": target.handler_name,
+            "target_host": target.target_host,
+            "attempt": attempt_count,
+        }
+        logger.info("crawler.job.started", **log_context)
         try:
             if task_input.target_host != target.target_host:
                 raise PermanentCrawlerError("crawler task host does not match the stored target")
@@ -84,14 +97,33 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
             retryable = _is_retryable(exc)
             if retryable and attempt_count < MAX_EXECUTION_ATTEMPTS:
                 await repository.mark_retrying(job, error=exc)
+                logger.warning(
+                    "crawler.job.retrying",
+                    **log_context,
+                    duration_ms=round((time.perf_counter() - start) * 1000, 2),
+                    error_category=CrawlErrorCategory.TRANSIENT,
+                    error_code=exc.__class__.__name__,
+                )
                 raise
             category = CrawlErrorCategory.TRANSIENT if retryable else _error_category(exc)
             await repository.mark_failed(job, error=exc, category=category)
+            logger.error(
+                "crawler.job.failed",
+                **log_context,
+                duration_ms=round((time.perf_counter() - start) * 1000, 2),
+                error_category=category,
+                error_code=exc.__class__.__name__,
+            )
             if retryable:
                 raise
             raise NonRetryableException(str(exc)) from exc
 
         await repository.mark_succeeded(job, result=result)
+        logger.info(
+            "crawler.job.succeeded",
+            **log_context,
+            duration_ms=round((time.perf_counter() - start) * 1000, 2),
+        )
         return result
 
 

@@ -85,6 +85,22 @@ class RecordingRepository:
         self.calls.append(("failed", str(error)))
 
 
+class FakeLogger:
+    def __init__(self) -> None:
+        self.infos: list[tuple[str, dict[str, Any]]] = []
+        self.warnings: list[tuple[str, dict[str, Any]]] = []
+        self.errors: list[tuple[str, dict[str, Any]]] = []
+
+    def info(self, event: str, **kwargs: Any) -> None:
+        self.infos.append((event, kwargs))
+
+    def warning(self, event: str, **kwargs: Any) -> None:
+        self.warnings.append((event, kwargs))
+
+    def error(self, event: str, **kwargs: Any) -> None:
+        self.errors.append((event, kwargs))
+
+
 def _task_input() -> CrawlTaskInput:
     return CrawlTaskInput(
         crawl_job_id=uuid4(),
@@ -99,9 +115,22 @@ def _install_runner_fakes(
     handler: Any,
     *,
     status: CrawlJobStatus = CrawlJobStatus.QUEUED,
+    task_input: CrawlTaskInput | None = None,
 ) -> RecordingRepository:
-    job = SimpleNamespace(status=status, result={"stored": True})
-    target = SimpleNamespace(handler_name="html", target_host="example.com")
+    task_input = task_input or _task_input()
+    job = SimpleNamespace(
+        id=task_input.crawl_job_id,
+        tenant_id=task_input.tenant_id,
+        status=status,
+        result={"stored": True},
+        hatchet_run_id=None,
+    )
+    target = SimpleNamespace(
+        target_url_id=task_input.target_url_id,
+        handler_name="html",
+        target_host="example.com",
+        target_url="https://example.com/secret-token",
+    )
     repository = RecordingRepository(object(), job, target)
     registry = CrawlerRegistry()
     registry.register("html", handler)
@@ -112,6 +141,12 @@ def _install_runner_fakes(
     return repository
 
 
+def _logged_event(logger: FakeLogger, event: str) -> dict[str, Any]:
+    return next(
+        fields for name, fields in logger.infos + logger.warnings + logger.errors if name == event
+    )
+
+
 async def test_runner_persists_success(monkeypatch: pytest.MonkeyPatch) -> None:
     repository = _install_runner_fakes(monkeypatch, _handler)
     result = await run_crawl_task(
@@ -120,6 +155,52 @@ async def test_runner_persists_success(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert result == {}
     assert repository.calls == [("running", 1), ("succeeded", {})]
+
+
+async def test_runner_logs_started_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    logger = FakeLogger()
+    task_input = _task_input()
+    monkeypatch.setattr(runner_module, "logger", logger, raising=False)
+    _install_runner_fakes(monkeypatch, _handler, task_input=task_input)
+
+    await run_crawl_task(
+        task_input,
+        SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
+    )
+
+    assert _logged_event(logger, "crawler.job.started") == {
+        "crawl_job_id": str(task_input.crawl_job_id),
+        "hatchet_run_id": None,
+        "handler_name": "html",
+        "target_host": "example.com",
+        "attempt": 1,
+    }
+
+
+async def test_runner_logs_succeeded_job_without_raw_target_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = FakeLogger()
+    task_input = _task_input()
+    monkeypatch.setattr(runner_module, "logger", logger, raising=False)
+    _install_runner_fakes(monkeypatch, _handler, task_input=task_input)
+
+    await run_crawl_task(
+        task_input,
+        SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
+    )
+
+    fields = _logged_event(logger, "crawler.job.succeeded")
+    assert fields == {
+        "crawl_job_id": str(task_input.crawl_job_id),
+        "hatchet_run_id": None,
+        "handler_name": "html",
+        "target_host": "example.com",
+        "attempt": 1,
+        "duration_ms": fields["duration_ms"],
+    }
+    assert isinstance(fields["duration_ms"], float)
+    assert "secret" not in str(fields)
 
 
 async def test_runner_short_circuits_terminal_job(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -145,6 +226,35 @@ async def test_runner_records_retryable_failure(monkeypatch: pytest.MonkeyPatch)
     assert repository.calls == [("running", 1), ("retrying", "timeout")]
 
 
+async def test_runner_logs_retrying_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fail(target: object, client: object) -> dict[str, object]:
+        raise CrawlerNetworkError("timeout")
+
+    logger = FakeLogger()
+    task_input = _task_input()
+    monkeypatch.setattr(runner_module, "logger", logger, raising=False)
+    _install_runner_fakes(monkeypatch, fail, task_input=task_input)
+
+    with pytest.raises(CrawlerNetworkError):
+        await run_crawl_task(
+            task_input,
+            SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
+        )
+
+    fields = _logged_event(logger, "crawler.job.retrying")
+    assert fields == {
+        "crawl_job_id": str(task_input.crawl_job_id),
+        "hatchet_run_id": None,
+        "handler_name": "html",
+        "target_host": "example.com",
+        "attempt": 1,
+        "duration_ms": fields["duration_ms"],
+        "error_category": "transient",
+        "error_code": "CrawlerNetworkError",
+    }
+    assert isinstance(fields["duration_ms"], float)
+
+
 async def test_runner_stops_retrying_permanent_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -158,3 +268,48 @@ async def test_runner_stops_retrying_permanent_failure(
             SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
         )
     assert repository.calls == [("running", 1), ("failed", "invalid")]
+
+
+async def test_runner_logs_failed_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fail(target: object, client: object) -> dict[str, object]:
+        raise PermanentCrawlerError("invalid")
+
+    logger = FakeLogger()
+    task_input = _task_input()
+    monkeypatch.setattr(runner_module, "logger", logger, raising=False)
+    _install_runner_fakes(monkeypatch, fail, task_input=task_input)
+
+    with pytest.raises(NonRetryableException):
+        await run_crawl_task(
+            task_input,
+            SimpleNamespace(attempt_number=1),  # type: ignore[arg-type]
+        )
+
+    fields = _logged_event(logger, "crawler.job.failed")
+    assert fields == {
+        "crawl_job_id": str(task_input.crawl_job_id),
+        "hatchet_run_id": None,
+        "handler_name": "html",
+        "target_host": "example.com",
+        "attempt": 1,
+        "duration_ms": fields["duration_ms"],
+        "error_code": "PermanentCrawlerError",
+        "error_category": "permanent",
+    }
+    assert isinstance(fields["duration_ms"], float)
+
+
+async def test_runner_marks_exhausted_retryable_failure_as_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail(target: object, client: object) -> dict[str, object]:
+        raise CrawlerNetworkError("timeout")
+
+    repository = _install_runner_fakes(monkeypatch, fail)
+    with pytest.raises(CrawlerNetworkError):
+        await run_crawl_task(
+            _task_input(),
+            SimpleNamespace(attempt_number=3),  # type: ignore[arg-type]
+        )
+
+    assert repository.calls == [("running", 3), ("failed", "timeout")]

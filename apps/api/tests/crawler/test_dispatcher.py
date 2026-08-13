@@ -22,11 +22,12 @@ class FakeSession:
 
 
 class FakeRepository:
-    def __init__(self) -> None:
+    def __init__(self, *, terminal_failure: bool = False) -> None:
         self.session = FakeSession()
-        self.job = LeasedCrawlJob(uuid4(), uuid4(), uuid4(), "example.com", 1)
+        self.job = LeasedCrawlJob(uuid4(), uuid4(), uuid4(), "example.com", "example", 1)
         self.dispatched: list[str] = []
         self.failures: list[str] = []
+        self.terminal_failure = terminal_failure
 
     async def lease_pending_jobs(self, *, limit: int, lease_seconds: int) -> list[LeasedCrawlJob]:
         return [self.job]
@@ -35,8 +36,9 @@ class FakeRepository:
         self.dispatched.append(str(kwargs["hatchet_run_id"]))
         return True
 
-    async def record_dispatch_failure(self, **kwargs: Any) -> None:
+    async def record_dispatch_failure(self, **kwargs: Any) -> bool:
         self.failures.append(str(kwargs["error"]))
+        return self.terminal_failure
 
 
 class FakeTask:
@@ -49,6 +51,22 @@ class FakeTask:
         if isinstance(self.result, Exception):
             raise self.result
         return self.result
+
+
+class FakeLogger:
+    def __init__(self) -> None:
+        self.infos: list[tuple[str, dict[str, Any]]] = []
+        self.warnings: list[tuple[str, dict[str, Any]]] = []
+        self.errors: list[tuple[str, dict[str, Any]]] = []
+
+    def info(self, event: str, **kwargs: Any) -> None:
+        self.infos.append((event, kwargs))
+
+    def warning(self, event: str, **kwargs: Any) -> None:
+        self.warnings.append((event, kwargs))
+
+    def error(self, event: str, **kwargs: Any) -> None:
+        self.errors.append((event, kwargs))
 
 
 class FakeSessionContext:
@@ -81,6 +99,29 @@ async def test_dispatch_records_hatchet_run() -> None:
     assert repository.dispatched == ["run-1"]
 
 
+async def test_dispatch_logs_dispatched_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    logger = FakeLogger()
+    monkeypatch.setattr(dispatcher, "logger", logger)
+    repository = FakeRepository()
+
+    await dispatch_once(
+        repository=repository,  # type: ignore[arg-type]
+        task=FakeTask(SimpleNamespace(workflow_run_id="run-1")),
+    )
+
+    event, fields = logger.infos[0]
+    assert event == "crawler.job.dispatched"
+    assert fields == {
+        "crawl_job_id": str(repository.job.id),
+        "hatchet_run_id": "run-1",
+        "handler_name": "example",
+        "target_host": "example.com",
+        "dispatch_attempt": 1,
+        "duration_ms": fields["duration_ms"],
+    }
+    assert isinstance(fields["duration_ms"], float)
+
+
 async def test_dispatch_recovers_idempotency_collision() -> None:
     repository = FakeRepository()
     await dispatch_once(
@@ -98,6 +139,31 @@ async def test_dispatch_records_submit_failure() -> None:
     )
     assert count == 0
     assert repository.failures == ["unavailable"]
+
+
+async def test_dispatch_records_empty_run_id() -> None:
+    repository = FakeRepository()
+    count = await dispatch_once(repository=repository, task=FakeTask(""))  # type: ignore[arg-type]
+    assert count == 0
+    assert repository.failures == ["Hatchet returned an empty run id"]
+
+
+async def test_dispatch_logs_failed_after_retry_exhaustion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = FakeLogger()
+    monkeypatch.setattr(dispatcher, "logger", logger)
+    repository = FakeRepository(terminal_failure=True)
+
+    await dispatch_once(  # type: ignore[arg-type]
+        repository=repository,
+        task=FakeTask(RuntimeError("secret upstream response")),
+    )
+
+    event, fields = logger.errors[0]
+    assert event == "crawler.job.failed"
+    assert fields["error_code"] == "DISPATCH_FAILED"
+    assert "secret" not in str(fields)
 
 
 async def test_dispatcher_repeats_after_idle_interval(monkeypatch: pytest.MonkeyPatch) -> None:

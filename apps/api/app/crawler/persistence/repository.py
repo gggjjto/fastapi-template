@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
+import structlog
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +18,8 @@ from app.crawler.domain.constants import (
 )
 from app.crawler.domain.models import CrawlJob, CrawlTarget
 
+logger = structlog.get_logger(__name__)
+
 
 @dataclass(frozen=True, slots=True)
 class LeasedCrawlJob:
@@ -24,6 +27,7 @@ class LeasedCrawlJob:
     tenant_id: uuid.UUID
     target_url_id: uuid.UUID
     target_host: str
+    handler_name: str
     dispatch_attempts: int
 
 
@@ -113,6 +117,7 @@ class CrawlerRepository:
         leased: list[LeasedCrawlJob] = []
         for job, target in rows:
             if job.dispatch_attempts >= MAX_DISPATCH_ATTEMPTS:
+                finished_at = datetime.now(UTC)
                 job.dispatch_state = CrawlDispatchState.FAILED
                 job.status = CrawlJobStatus.FAILED
                 job.error_category = CrawlErrorCategory.TRANSIENT
@@ -120,6 +125,17 @@ class CrawlerRepository:
                 job.error_message = "Crawler dispatch lease expired after maximum attempts"
                 job.dispatch_lease_until = None
                 job.next_dispatch_at = None
+                job.finished_at = finished_at
+                logger.error(
+                    "crawler.job.failed",
+                    crawl_job_id=str(job.id),
+                    handler_name=target.handler_name,
+                    target_host=target.target_host,
+                    dispatch_attempt=job.dispatch_attempts,
+                    duration_ms=_duration_ms(job.created_at, finished_at),
+                    error_category=CrawlErrorCategory.TRANSIENT,
+                    error_code="DISPATCH_LEASE_EXHAUSTED",
+                )
                 continue
             job.dispatch_state = CrawlDispatchState.LEASED
             job.dispatch_attempts += 1
@@ -130,6 +146,7 @@ class CrawlerRepository:
                     tenant_id=job.tenant_id,
                     target_url_id=target.target_url_id,
                     target_host=target.target_host,
+                    handler_name=target.handler_name,
                     dispatch_attempts=job.dispatch_attempts,
                 )
             )
@@ -143,37 +160,44 @@ class CrawlerRepository:
         if job is None:
             return False
         if job.hatchet_run_id and job.hatchet_run_id != hatchet_run_id:
+            finished_at = datetime.now(UTC)
             job.dispatch_state = CrawlDispatchState.FAILED
             job.status = CrawlJobStatus.FAILED
             job.error_category = CrawlErrorCategory.PERMANENT
             job.error_code = "HATCHET_RUN_ID_CONFLICT"
             job.dispatch_lease_until = None
+            job.finished_at = finished_at
             return False
+        dispatched_at = datetime.now(UTC)
         job.hatchet_run_id = hatchet_run_id
         job.dispatch_state = CrawlDispatchState.DISPATCHED
         job.status = CrawlJobStatus.QUEUED
         job.dispatch_lease_until = None
         job.next_dispatch_at = None
+        if job.dispatched_at is None:
+            job.dispatched_at = dispatched_at
         return True
 
     async def record_dispatch_failure(
         self, *, job_id: uuid.UUID, tenant_id: uuid.UUID, error: str
-    ) -> None:
+    ) -> bool:
         job = await self._get_job(job_id=job_id, tenant_id=tenant_id)
         if job is None:
-            return
+            return False
         job.error_category = CrawlErrorCategory.TRANSIENT
         job.error_code = "DISPATCH_FAILED"
         job.error_message = error[:2000]
         job.dispatch_lease_until = None
         if job.dispatch_attempts >= MAX_DISPATCH_ATTEMPTS:
+            job.finished_at = datetime.now(UTC)
             job.dispatch_state = CrawlDispatchState.FAILED
             job.status = CrawlJobStatus.FAILED
-            return
+            return True
         job.dispatch_state = CrawlDispatchState.PENDING
         job.status = CrawlJobStatus.PENDING
         delay = min(5 * 2 ** (job.dispatch_attempts - 1), 300)
         job.next_dispatch_at = datetime.now(UTC) + timedelta(seconds=delay)
+        return False
 
     async def load_for_execution(
         self,
@@ -198,6 +222,8 @@ class CrawlerRepository:
     async def mark_running(self, job: CrawlJob, *, attempt_count: int) -> None:
         job.status = CrawlJobStatus.RUNNING
         job.attempt_count = attempt_count
+        if job.started_at is None:
+            job.started_at = datetime.now(UTC)
         job.error_category = None
         job.error_code = None
         job.error_message = None
@@ -213,6 +239,7 @@ class CrawlerRepository:
     async def mark_succeeded(self, job: CrawlJob, *, result: dict[str, Any]) -> None:
         job.status = CrawlJobStatus.SUCCEEDED
         job.result = result
+        job.finished_at = datetime.now(UTC)
         await self.session.commit()
 
     async def mark_failed(
@@ -226,6 +253,7 @@ class CrawlerRepository:
         job.error_category = category
         job.error_code = error.__class__.__name__
         job.error_message = str(error)[:2000]
+        job.finished_at = datetime.now(UTC)
         await self.session.commit()
 
     async def _get_job(self, *, job_id: uuid.UUID, tenant_id: uuid.UUID) -> CrawlJob | None:
@@ -233,3 +261,9 @@ class CrawlerRepository:
             select(CrawlJob).where(CrawlJob.id == job_id, CrawlJob.tenant_id == tenant_id)
         )
         return result.scalar_one_or_none()
+
+
+def _duration_ms(start: datetime, end: datetime) -> float:
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=UTC)
+    return round((end - start).total_seconds() * 1000, 2)
