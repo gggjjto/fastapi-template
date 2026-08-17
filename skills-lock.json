@@ -1,12 +1,6 @@
 {
   "version": 1,
   "skills": {
-    "architecture-decision-records": {
-      "source": "wshobson/agents",
-      "sourceType": "github",
-      "skillPath": "plugins/documentation-generation/skills/architecture-decision-records/SKILL.md",
-      "computedHash": "bffeafc71791924809ca9e24bfe3f18e87b2a060dbe5484468b4ff06c8e693b2"
-    },
     "code-review-excellence": {
       "source": "wshobson/agents",
       "sourceType": "github",
@@ -18,24 +12,6 @@
       "sourceType": "github",
       "skillPath": "skills/documentation-and-adrs/SKILL.md",
       "computedHash": "1c1b33b3c8ff1d5f9fdcf9d8a7a67f82384b3224e88af567fd4688f3f2d9e85b"
-    },
-    "fastapi": {
-      "source": "fastapi/fastapi",
-      "sourceType": "github",
-      "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md",
-      "computedHash": "ee23d5285caf055cf164ff45dd34888d381143564666baacab8aa786f22e413a"
-    },
-    "incident-response": {
-      "source": "anthropics/knowledge-work-plugins",
-      "sourceType": "github",
-      "skillPath": "engineering/skills/incident-response/SKILL.md",
-      "computedHash": "7bca2a38e630dae90f022997b6a50754f6e9d83ca85f9134f677cfcde9c703a6"
-    },
-    "observability-engineer": {
-      "source": "sickn33/antigravity-awesome-skills",
-      "sourceType": "github",
-      "skillPath": "skills/observability-engineer/SKILL.md",
-      "computedHash": "5fd8f9591f0dea4c1e393e83d7dfcabf07147556423396e61f65bc7987b54c1f"
     }
   }
 }

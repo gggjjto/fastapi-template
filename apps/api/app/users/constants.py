@@ -10,6 +10,3 @@ class Permission:
     """users 域权限码，格式 resource:action。"""
 
     READ = "users:read"
-    CREATE = "users:create"
-    UPDATE = "users:update"
-    DELETE = "users:delete"

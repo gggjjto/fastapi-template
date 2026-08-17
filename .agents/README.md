@@ -53,17 +53,9 @@ creates avoidable repository noise.
 
 ## Installed Community Skills
 
-The currently recorded community skills are tracked in `../skills-lock.json`:
-
-- `fastapi` from `fastapi/fastapi`
-- `documentation-and-adrs` from `addyosmani/agent-skills`
-- `architecture-decision-records` from `wshobson/agents`
-- `code-review-excellence` from `wshobson/agents`
-- `observability-engineer` from `sickn33/antigravity-awesome-skills`
-- `incident-response` from `anthropics/knowledge-work-plugins`
-
-Review every community skill before using it. Skills run with the same filesystem
-and tool permissions as the active agent.
+`../skills-lock.json` is the authoritative installed-community-skill list. Review
+every community skill before using it; skills run with the same filesystem and
+tool permissions as the active agent.
 
 ## First-party Workflows
 
