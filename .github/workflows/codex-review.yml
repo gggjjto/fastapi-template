@@ -1,0 +1,85 @@
+name: Codex Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: codex-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Codex Review Gate
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require a trusted source branch
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        shell: bash
+        run: |
+          echo 'Codex review requires a branch in this repository; fork secrets are intentionally unavailable.' >&2
+          exit 1
+
+      - name: Checkout pull request merge commit
+        uses: actions/checkout@v5
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify OpenAI credential
+        env:
+          CODEX_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          if [ -z "$CODEX_OPENAI_API_KEY" ]; then
+            echo 'OPENAI_API_KEY repository secret is required.' >&2
+            exit 1
+          fi
+
+      - name: Run read-only Codex review
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/code-review-prompt.md
+          output-file: codex-review.json
+          output-schema-file: .github/code-review-output-schema.json
+          codex-args: '["--ephemeral"]'
+          permission-profile: ":read-only"
+          safety-strategy: drop-sudo
+
+      - name: Enforce review verdict
+        shell: bash
+        run: |
+          jq -e '
+            .verdict == "APPROVE" and
+            ([.findings[] | select(.severity == "P0" or .severity == "P1")] | length == 0)
+          ' codex-review.json
+
+      - name: Publish review summary
+        if: always() && hashFiles('codex-review.json') != ''
+        shell: bash
+        run: |
+          {
+            echo '## Codex Review'
+            echo
+            jq -r '"**Verdict:** \(.verdict)\n\n\(.summary)"' codex-review.json
+            echo
+            jq -r '
+              .findings[]? |
+              "- **\(.severity)** `\(.file):\(.line)` — \(.title)\n  \(.details)\n  Fix: \(.fix)"
+            ' codex-review.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload review artifact
+        if: always() && hashFiles('codex-review.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: codex-review
+          path: codex-review.json
+          retention-days: 14
