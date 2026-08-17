@@ -75,6 +75,12 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Keep toolchain majors aligned with the repository's chosen Node/Next versions.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # Dockerfile 基础镜像
   - package-ecosystem: "docker"
