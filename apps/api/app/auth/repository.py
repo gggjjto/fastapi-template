@@ -91,6 +91,14 @@ class RbacRepository:
     async def get_role_by_name(self, name: str) -> Role | None:
         return (await self.session.scalars(select(Role).where(Role.name == name))).first()
 
+    async def user_has_role(self, user_id: uuid.UUID, role_name: str) -> bool:
+        stmt = (
+            select(UserRole.user_id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(UserRole.user_id == user_id, Role.name == role_name)
+        )
+        return (await self.session.scalar(stmt)) is not None
+
     async def assign_role_to_user(self, user_id: uuid.UUID, role_id: uuid.UUID) -> None:
         existing = (
             await self.session.scalars(

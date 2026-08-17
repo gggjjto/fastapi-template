@@ -8,9 +8,7 @@ from typing import Any
 import structlog
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.exceptions import NonRetryableException
-from hatchet_sdk.types.concurrency import ConcurrencyExpression, ConcurrencyLimitStrategy
 from hatchet_sdk.types.idempotency import TTLBasedIdempotencyConfig
-from hatchet_sdk.types.rate_limit import RateLimit, RateLimitDuration
 from pydantic import ValidationError
 
 from app.crawler.domain.constants import (
@@ -36,21 +34,6 @@ def create_crawl_task(hatchet: Hatchet) -> Any:
         backoff_factor=2,
         backoff_max_seconds=300,
         execution_timeout=timedelta(minutes=5),
-        concurrency=[
-            ConcurrencyExpression(
-                expression="input.target_host",
-                max_runs=2,
-                limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
-            )
-        ],
-        rate_limits=[
-            RateLimit(
-                dynamic_key="input.target_host",
-                units=1,
-                limit=1,
-                duration=RateLimitDuration.SECOND,
-            )
-        ],
         idempotency=TTLBasedIdempotencyConfig(
             key_expression="input.crawl_job_id",
             ttl=timedelta(days=30),
@@ -61,11 +44,7 @@ def create_crawl_task(hatchet: Hatchet) -> Any:
 async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[str, object] | None:
     async with AsyncSessionLocal() as session:
         repository = CrawlerRepository(session)
-        loaded = await repository.load_for_execution(
-            job_id=task_input.crawl_job_id,
-            tenant_id=task_input.tenant_id,
-            target_url_id=task_input.target_url_id,
-        )
+        loaded = await repository.load_for_execution(job_id=task_input.crawl_job_id)
         if loaded is None:
             raise NonRetryableException("crawler job or target not found")
         job, target = loaded
@@ -74,7 +53,8 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
 
         attempt_count = int(context.attempt_number)
         start = time.perf_counter()
-        await repository.mark_running(job, attempt_count=attempt_count)
+        if not await repository.mark_running(job, attempt_count=attempt_count):
+            return job.result
         log_context = {
             "crawl_job_id": str(job.id),
             "hatchet_run_id": job.hatchet_run_id,
@@ -84,8 +64,6 @@ async def run_crawl_task(task_input: CrawlTaskInput, context: Context) -> dict[s
         }
         logger.info("crawler.execution.started", **log_context)
         try:
-            if task_input.target_host != target.target_host:
-                raise PermanentCrawlerError("crawler task host does not match the stored target")
             handler = registry.get(target.handler_name)
             async with SafeAsyncCrawlerClient() as client:
                 result = await handler(target, client)

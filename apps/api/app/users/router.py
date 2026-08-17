@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
 from app.auth.dependencies import RequirePermission
+from app.core.limiter import limiter
 from app.core.openapi import error_responses
 from app.core.pagination import Page, Pagination
 from app.core.response import ApiResponse
@@ -24,11 +25,19 @@ router = APIRouter()
     description=(
         "创建新用户。\n\n"
         "- 邮箱全局唯一，重复注册返回 409\n"
-        "- 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆"
+        "- 密码长度 8~128 位，存储时使用 bcrypt 哈希，不可逆\n"
+        "- 同一 IP 每分钟最多创建 10 个账号"
     ),
-    responses=error_responses(status.HTTP_409_CONFLICT, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    responses=error_responses(
+        status.HTTP_409_CONFLICT,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status.HTTP_429_TOO_MANY_REQUESTS,
+    ),
 )
-async def create_user(payload: UserCreate, session: DBSession) -> ApiResponse[UserRead]:
+@limiter.limit("10/minute")
+async def create_user(
+    request: Request, payload: UserCreate, session: DBSession
+) -> ApiResponse[UserRead]:
     user = await UserService(session).create_user(payload)
     return ApiResponse.ok(UserRead.model_validate(user))
 

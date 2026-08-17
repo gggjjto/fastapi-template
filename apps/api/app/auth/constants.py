@@ -16,5 +16,6 @@ class Permission:
 
 
 class RoleName:
-    ADMIN = "admin"
+    PLATFORM_ADMIN = "platform_admin"
+    ADMIN = PLATFORM_ADMIN
     USER = "user"

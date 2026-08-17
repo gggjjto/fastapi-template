@@ -34,7 +34,8 @@ ResultJson = JSON().with_variant(JSONB, "postgresql")
 class CrawlTarget(Base):
     __tablename__ = "crawl_targets"
     __table_args__ = (
-        UniqueConstraint("tenant_id", "target_url_id", name="uq_crawl_targets_tenant_target_url"),
+        UniqueConstraint("tenant_id", "target_url", name="uq_crawl_targets_tenant_url"),
+        CheckConstraint("name <> ''", name="crawl_target_name_not_empty"),
         CheckConstraint("target_url <> ''", name="target_url_not_empty"),
         CheckConstraint("target_host <> ''", name="target_host_not_empty"),
         CheckConstraint("handler_name <> ''", name="handler_name_not_empty"),
@@ -42,12 +43,19 @@ class CrawlTarget(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
-    target_url_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
     target_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     target_host: Mapped[str] = mapped_column(String(253), nullable=False)
     handler_name: Mapped[str] = mapped_column(String(128), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    schedule_cron: Mapped[str | None] = mapped_column(String(128))
+    schedule_timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
+    schedule_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -61,7 +69,8 @@ class CrawlJob(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "idempotency_key", name="uq_crawl_jobs_tenant_idempotency"),
         CheckConstraint(
-            "status IN ('pending', 'queued', 'running', 'retrying', 'succeeded', 'failed')",
+            "status IN ('pending', 'queued', 'running', 'retrying', 'succeeded', 'failed', "
+            "'cancelled')",
             name="status_valid",
         ),
         CheckConstraint(
@@ -78,7 +87,9 @@ class CrawlJob(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
     crawl_target_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("crawl_targets.id", ondelete="CASCADE"), nullable=False
     )
@@ -99,6 +110,11 @@ class CrawlJob(Base):
     error_code: Mapped[str | None] = mapped_column(String(128))
     error_message: Mapped[str | None] = mapped_column(Text)
     result: Mapped[dict[str, Any] | None] = mapped_column(ResultJson)
+    scheduled_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retry_of_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("crawl_jobs.id", ondelete="SET NULL")
+    )
+    cancel_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

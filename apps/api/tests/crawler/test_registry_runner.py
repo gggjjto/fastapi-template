@@ -72,8 +72,9 @@ class RecordingRepository:
     async def load_for_execution(self, **kwargs: object) -> tuple[object, object]:
         return self.job, self.target
 
-    async def mark_running(self, job: object, *, attempt_count: int) -> None:
+    async def mark_running(self, job: object, *, attempt_count: int) -> bool:
         self.calls.append(("running", attempt_count))
+        return True
 
     async def mark_retrying(self, job: object, *, error: Exception) -> None:
         self.calls.append(("retrying", str(error)))
@@ -102,12 +103,7 @@ class FakeLogger:
 
 
 def _task_input() -> CrawlTaskInput:
-    return CrawlTaskInput(
-        crawl_job_id=uuid4(),
-        tenant_id=uuid4(),
-        target_url_id=uuid4(),
-        target_host="example.com",
-    )
+    return CrawlTaskInput(crawl_job_id=uuid4())
 
 
 def _install_runner_fakes(
@@ -120,13 +116,12 @@ def _install_runner_fakes(
     task_input = task_input or _task_input()
     job = SimpleNamespace(
         id=task_input.crawl_job_id,
-        tenant_id=task_input.tenant_id,
+        tenant_id=uuid4(),
         status=status,
         result={"stored": True},
         hatchet_run_id=None,
     )
     target = SimpleNamespace(
-        target_url_id=task_input.target_url_id,
         handler_name="html",
         target_host="example.com",
         target_url="https://example.com/secret-token",

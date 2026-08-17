@@ -18,6 +18,9 @@ from app.users.models import User
 from app.users.repository import UserRepository
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{get_settings().api_v1_prefix}/auth/token")
+optional_oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl=f"{get_settings().api_v1_prefix}/auth/token", auto_error=False
+)
 
 CurrentToken = Annotated[str, Depends(oauth2_scheme)]
 
@@ -48,6 +51,19 @@ async def get_current_active_user(user: Annotated[User, Depends(get_current_user
 
 
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
+
+
+async def get_optional_current_active_user(
+    session: DBSession,
+    token: Annotated[str | None, Depends(optional_oauth2_scheme)],
+) -> User | None:
+    if token is None:
+        return None
+    user = await get_current_user(session, token)
+    return await get_current_active_user(user)
+
+
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_active_user)]
 
 
 class RequirePermission:

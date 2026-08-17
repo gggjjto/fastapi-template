@@ -5,6 +5,8 @@ import uuid
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
+from app.auth.bootstrap import bootstrap_platform_admin
+from app.db.session import AsyncSessionLocal
 from app.main import app
 
 
@@ -15,9 +17,10 @@ async def _boom() -> None:
 
 
 async def _admin_headers(client: AsyncClient) -> dict[str, str]:
-    """注册首个用户（自动成为 admin，拥有 users:read）并返回鉴权头。"""
+    """显式创建平台管理员并返回鉴权头。"""
     payload = {"email": "eh-admin@example.com", "full_name": "EH Admin", "password": "Password123!"}
-    await client.post("/api/v1/users", json=payload)
+    async with AsyncSessionLocal() as session:
+        await bootstrap_platform_admin(session, **payload)
     resp = await client.post(
         "/api/v1/auth/token", json={"email": payload["email"], "password": payload["password"]}
     )

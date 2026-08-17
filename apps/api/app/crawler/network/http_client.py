@@ -196,14 +196,26 @@ class SafeAsyncCrawlerClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def fetch(self, url: str, *, headers: httpx.Headers | None = None) -> CrawlerResponse:
+    async def fetch(
+        self,
+        url: str,
+        *,
+        headers: httpx.Headers | None = None,
+        raise_for_status: bool = True,
+    ) -> CrawlerResponse:
         try:
             async with asyncio.timeout(self._total_timeout):
-                return await self._fetch(url, headers=headers)
+                return await self._fetch(url, headers=headers, raise_for_status=raise_for_status)
         except TimeoutError as exc:
             raise CrawlerNetworkError(f"Crawler request exceeded {self._total_timeout}s") from exc
 
-    async def _fetch(self, url: str, *, headers: httpx.Headers | None = None) -> CrawlerResponse:
+    async def _fetch(
+        self,
+        url: str,
+        *,
+        headers: httpx.Headers | None = None,
+        raise_for_status: bool = True,
+    ) -> CrawlerResponse:
         next_url = httpx.URL(url)
         if next_url.scheme not in {"http", "https"}:
             raise CrawlerUnsafeHostError(f"Unsupported crawler URL scheme: {next_url.scheme!r}")
@@ -217,7 +229,7 @@ class SafeAsyncCrawlerClient:
             await _resolve_safe_host(origin_host, port)
             response = await self._request(next_url, headers=headers)
             if response.status_code not in REDIRECT_STATUS_CODES:
-                if response.status_code >= 400:
+                if raise_for_status and response.status_code >= 400:
                     raise CrawlerHTTPStatusError(response.status_code, str(next_url))
                 return response
 

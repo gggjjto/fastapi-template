@@ -38,7 +38,7 @@ class FakeRepository:
         fail_commit: bool = False,
     ) -> None:
         self.session = FakeSession(fail_commit=fail_commit)
-        self.job = LeasedCrawlJob(uuid4(), uuid4(), uuid4(), "example.com", "example", 1)
+        self.job = LeasedCrawlJob(uuid4(), uuid4(), "example.com", "http_snapshot", 1)
         self.dispatched: list[str] = []
         self.failures: list[str] = []
         self.terminal_failure = terminal_failure
@@ -147,7 +147,7 @@ async def test_dispatch_logs_dispatched_job(monkeypatch: pytest.MonkeyPatch) -> 
     assert fields == {
         "crawl_job_id": str(repository.job.id),
         "hatchet_run_id": "run-1",
-        "handler_name": "example",
+        "handler_name": "http_snapshot",
         "target_host": "example.com",
         "attempt": 1,
         "duration_ms": fields["duration_ms"],
@@ -233,7 +233,7 @@ async def test_exhausted_dispatch_logs_distinct_duration_semantics(
             "crawler.dispatch.lease_exhausted",
             {
                 "crawl_job_id": str(repository.job.id),
-                "handler_name": "example",
+                "handler_name": "http_snapshot",
                 "target_host": "example.com",
                 "attempt": 1,
                 "job_age_ms": 1000.0,

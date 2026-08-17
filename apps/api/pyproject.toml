@@ -3,7 +3,7 @@ requires = ["hatchling>=1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "fastapi-template"
+name = "rapid-template-api"
 version = "0.1.0"
 description = "A modern FastAPI backend starter template."
 readme = "README.md"
@@ -38,6 +38,7 @@ dependencies = [
   # redis>=4.2 已内置 asyncio 支持，无需 [asyncio] extra
   "redis>=5.0.0,<6.0.0",
   "hatchet-sdk>=1.37.1,<2.0.0",
+  "croniter>=6.0.0,<7.0.0",
   "httpcore>=1.0.9,<2.0.0",
   "httpx>=0.28.0,<1.0.0",
   "slowapi>=0.1.10,<1.0.0",
@@ -53,6 +54,7 @@ dev = [
   "mypy>=1.15.0,<2.0.0",
   "pre-commit>=4.6.1,<5.0.0",
   "pytest-cov>=7.1.0",
+  "types-croniter>=6.0.0.20250809",
   "asgi-lifespan>=2.1.0,<3.0.0",
 ]
 
@@ -82,7 +84,7 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["app"]
 branch = true   # measure branch coverage in addition to line coverage
-# 现已由集成测试覆盖：cache.py / redis.py / worker.py 的任务函数
+# Redis 连接与 worker task 由集成测试覆盖。
 omit = [
     "app/core/sentry.py",    # 需要真实 Sentry DSN 才能覆盖
 ]

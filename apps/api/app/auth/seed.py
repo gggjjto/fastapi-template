@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import constants as auth_constants
@@ -17,15 +17,18 @@ ALL_PERMISSIONS: list[str] = [
     auth_constants.Permission.ROLES_MANAGE,
 ]
 
-# 默认角色 → 权限码。admin 拥有全部；user 暂无权限（非特权用户占位）。
+# 默认角色 → 权限码。平台管理员拥有全部；普通用户仅通过租户成员身份授权。
 ROLE_PERMISSIONS: dict[str, list[str]] = {
-    auth_constants.RoleName.ADMIN: ALL_PERMISSIONS,
+    auth_constants.RoleName.PLATFORM_ADMIN: ALL_PERMISSIONS,
     auth_constants.RoleName.USER: [],
 }
 
 
 async def ensure_default_rbac(session: AsyncSession) -> None:
     """幂等地播种权限目录与默认角色。每次启动调用，已存在则跳过。"""
+    if session.get_bind().dialect.name == "postgresql":
+        # 多进程同时启动时串行化参考数据播种，避免唯一约束竞争。
+        await session.execute(text("SELECT pg_advisory_xact_lock(724819503)"))
     permissions = {p.code: p for p in (await session.scalars(select(Permission))).all()}
     for code in ALL_PERMISSIONS:
         if code not in permissions:

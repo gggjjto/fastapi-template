@@ -18,28 +18,22 @@ def _unique_columns(table: Table) -> set[tuple[str, ...]]:
     }
 
 
-def test_crawl_task_input_contains_only_routing_metadata() -> None:
-    payload = CrawlTaskInput(
-        crawl_job_id=uuid4(),
-        tenant_id=uuid4(),
-        target_url_id=uuid4(),
-        target_host="example.com",
-    )
-    assert set(payload.model_dump()) == {
-        "crawl_job_id",
-        "tenant_id",
-        "target_url_id",
-        "target_host",
-    }
+def test_crawl_task_input_contains_only_job_id() -> None:
+    payload = CrawlTaskInput(crawl_job_id=uuid4())
+    assert set(payload.model_dump()) == {"crawl_job_id"}
 
 
 def test_tenant_scoped_unique_constraints() -> None:
-    assert ("tenant_id", "target_url_id") in _unique_columns(cast(Table, CrawlTarget.__table__))
+    assert ("tenant_id", "target_url") in _unique_columns(cast(Table, CrawlTarget.__table__))
     assert ("tenant_id", "idempotency_key") in _unique_columns(cast(Table, CrawlJob.__table__))
 
 
-def test_terminal_job_states() -> None:
-    assert CrawlJobStatus.terminal() == {CrawlJobStatus.SUCCEEDED, CrawlJobStatus.FAILED}
+def test_terminal_job_states_include_cancelled() -> None:
+    assert CrawlJobStatus.terminal() == {
+        CrawlJobStatus.SUCCEEDED,
+        CrawlJobStatus.FAILED,
+        CrawlJobStatus.CANCELLED,
+    }
 
 
 def test_finished_at_has_diagnostics_index() -> None:

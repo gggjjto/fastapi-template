@@ -49,12 +49,7 @@ async def _dispatch_job(
     repository: CrawlerRepository, task: CrawlTaskDispatcher, job: LeasedCrawlJob
 ) -> bool:
     start = time.perf_counter()
-    task_input = CrawlTaskInput(
-        crawl_job_id=job.id,
-        tenant_id=job.tenant_id,
-        target_url_id=job.target_url_id,
-        target_host=job.target_host,
-    )
+    task_input = CrawlTaskInput(crawl_job_id=job.id)
     try:
         run = await task.aio_run(input=task_input, wait_for_result=False)
         run_id = str(getattr(run, "workflow_run_id", getattr(run, "run_id", run)))
