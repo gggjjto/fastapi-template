@@ -31,6 +31,9 @@
     "@rapid-template/config#test": {
       "outputs": []
     },
+    "@rapid-template/admin#test": {
+      "outputs": []
+    },
     "@rapid-template/web#test": {
       "outputs": []
     },
