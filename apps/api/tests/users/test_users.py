@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.auth.bootstrap import bootstrap_platform_admin
 from app.auth.repository import RbacRepository
 from app.auth.seed import ensure_default_rbac
 from app.db.session import AsyncSessionLocal
@@ -20,8 +21,9 @@ _ADMIN_PAYLOAD = {"email": "admin@example.com", "full_name": "Admin", "password"
 
 
 async def _admin_headers(client: AsyncClient) -> dict[str, str]:
-    """注册首个用户（自动成为 admin，拥有 users:read）并返回鉴权头。"""
-    await client.post("/api/v1/users", json=_ADMIN_PAYLOAD)
+    """显式创建平台管理员并返回鉴权头。"""
+    async with AsyncSessionLocal() as session:
+        await bootstrap_platform_admin(session, **_ADMIN_PAYLOAD)
     resp = await client.post(
         "/api/v1/auth/token",
         json={"email": _ADMIN_PAYLOAD["email"], "password": _ADMIN_PAYLOAD["password"]},
@@ -97,7 +99,7 @@ async def test_concurrent_duplicate_email_returns_one_409(client: AsyncClient) -
     assert conflict.json()["code"] == "USER_EMAIL_CONFLICT"
 
 
-async def test_concurrent_initial_users_assigns_one_admin(client: AsyncClient) -> None:
+async def test_concurrent_initial_users_assign_no_admin(client: AsyncClient) -> None:
     user_a = {"email": "a@example.com", "full_name": "User A", "password": "Password123!"}
     user_b = {"email": "b@example.com", "full_name": "User B", "password": "Password123!"}
 
@@ -118,7 +120,7 @@ async def test_concurrent_initial_users_assigns_one_admin(client: AsyncClient) -
         access = await client.get("/api/v1/users", headers={"Authorization": f"Bearer {token}"})
         access_statuses.append(access.status_code)
 
-    assert sorted(access_statuses) == [200, 403]
+    assert access_statuses == [403, 403]
 
 
 async def test_role_assignment_failure_rolls_back_user(monkeypatch: pytest.MonkeyPatch) -> None:

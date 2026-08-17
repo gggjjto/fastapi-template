@@ -1,15 +1,16 @@
 # Rapid Development Template
 
 A personal rapid-development template workspace with a production-minded
-FastAPI backend in `apps/api`, a Next.js frontend in `apps/web`, and
+FastAPI backend in `apps/api`, a Next.js management console in `apps/admin`,
+a minimal business frontend in `apps/web`, and
 Turborepo orchestration for growing into workers, CLIs, SDKs, and automation
 templates when needed.
 
 ## Why this template
 
-- Domain-oriented structure for clean growth (`auth`, `users`, `core`)
-- JWT auth, RBAC, and unified API response/error contracts
-- Redis caching plus Hatchet Cloud background tasks
+- Domain-oriented structure for clean growth (`auth`, `tenants`, `crawler`)
+- JWT auth, platform RBAC, tenant roles, and invitation onboarding
+- Tenant-scoped crawler targets, Cron scheduling, Hatchet execution, and HTTP snapshots
 - Structured logging, request-id tracing, rate limiting
 - Ready for production hardening and CI-backed workflows
 - i18n error messages and async SQLAlchemy + Alembic setup
@@ -23,7 +24,6 @@ templates when needed.
 pnpm install
 make api-install
 cp apps/api/.env.example apps/api/.env
-make api-test-up
 make dev
 ```
 
@@ -33,6 +33,8 @@ Run API or web independently when you only need one side:
 make api-dev
 make api-worker  # requires HATCHET_CLIENT_TOKEN
 make api-crawler-dispatcher  # requires HATCHET_CLIENT_TOKEN
+make api-crawler-scheduler
+make admin-dev
 make web-dev
 ```
 
@@ -44,7 +46,8 @@ docker compose up
 ```
 
 API docs are available at `http://127.0.0.1:8000/docs`.
-The web app runs at `http://localhost:3000`.
+The business web app runs at `http://localhost:3000`; the management console
+runs at `http://localhost:3001`.
 
 ## Workspace commands
 
@@ -54,7 +57,8 @@ make typecheck    # Turbo typecheck across workspace packages
 make test         # Turbo test; API tests require make api-test-up
 make build        # Turbo build across workspace packages
 make api-ci       # Backend CI checks only
-make web-build    # Frontend build only
+make admin-build  # Management console build only
+make web-build    # Business frontend build only
 ```
 
 Shared workspace packages live under `packages/`. Start with

@@ -7,7 +7,7 @@
 # 启动：  make test-up
 # 关闭：  make test-down
 
-name: fastapi-template-test
+name: rapid-template-test
 
 services:
   crawler-dispatcher:

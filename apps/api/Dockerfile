@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ── Stage 1: builder — 使用 uv 解析并安装依赖到独立的虚拟环境 ──────────────
-FROM python:3.14-slim AS builder
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 # ── Stage 2: runtime — 精简镜像，仅含虚拟环境与源码 ─────────────────────
-FROM python:3.14-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -40,6 +40,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APP_PORT=8000 \
     # 每个 CPU 核心对应 1 个 worker，可通过环境变量覆盖
     WEB_CONCURRENCY=1
+
+# 安装基础镜像已发布的安全修复；最终镜像不保留 apt 索引。
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # 创建非 root 用户
 RUN groupadd --system --gid 1001 app \

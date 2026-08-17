@@ -3,7 +3,7 @@ doc_type: runbook
 status: active
 authority: supporting
 scope: local-development
-last_reviewed: 2026-08-12
+last_reviewed: 2026-08-17
 ---
 
 # 开发与验证
@@ -26,6 +26,7 @@ make api-test-up
 make api-migrate
 make api-dev
 make web-dev
+make admin-dev
 ```
 
 可选进程：
@@ -33,9 +34,11 @@ make web-dev
 ```bash
 HATCHET_CLIENT_TOKEN=... make api-worker
 HATCHET_CLIENT_TOKEN=... make api-crawler-dispatcher
+HATCHET_CLIENT_TOKEN=... make api-crawler-scheduler
 ```
 
-API 默认监听 `http://127.0.0.1:8000`，Web 默认监听 `http://localhost:3000`。
+API 默认监听 `http://127.0.0.1:8000`，业务 Web 默认监听
+`http://localhost:3000`，Admin 默认监听 `http://localhost:3001`。
 
 ## 质量门禁
 
@@ -44,7 +47,8 @@ API 默认监听 `http://127.0.0.1:8000`，Web 默认监听 `http://localhost:30
 | 仓库 Harness | `make harness-check` | 结构、文档契约和确定性评估 |
 | 后端 | `make api-ci` | Ruff、format、mypy、Harness、coverage |
 | 后端测试服务 | `make api-test-up` / `make api-test-down` | PostgreSQL 5433、Redis 6380 |
-| 前端 | `make web-lint web-typecheck web-build` | ESLint、TypeScript、Next build |
+| 业务前端 | `make web-lint web-typecheck web-build` | ESLint、TypeScript、Next build |
+| 管理后台 | `make admin-lint admin-typecheck admin-build` | ESLint、TypeScript、Next build |
 | Workspace | `make lint typecheck test build` | Turbo 任务图 |
 
 单个后端测试从 `apps/api` 运行：

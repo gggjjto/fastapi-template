@@ -265,3 +265,14 @@ def test_doctor_collects_repository_checks(monkeypatch) -> None:
         "APP_REDIS_URL",
         "APP_JWT_SECRET",
     ]
+
+
+def test_doctor_fails_by_default_when_a_required_check_fails(monkeypatch) -> None:
+    doctor = _load_script("doctor")
+    monkeypatch.setattr(
+        doctor,
+        "collect_checks",
+        lambda: [doctor.CheckResult("apps/api/.env", False, "missing")],
+    )
+
+    assert doctor.main([]) == 1

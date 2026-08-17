@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    project_name: str = "FastAPI Template"
+    project_name: str = "Rapid Development API"
     env: Literal["development", "staging", "production", "test"] = "development"
     debug: bool = True
     host: str = "0.0.0.0"  # nosec B104 — intentional for containerized deployment, override via APP_HOST
@@ -38,6 +38,17 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
+
+    # 租户邀请邮件；本地默认只输出邀请链接。
+    mail_backend: Literal["console", "smtp"] = "console"
+    mail_from: str = "noreply@example.com"
+    mail_host: str = "localhost"
+    mail_port: int = Field(default=587, ge=1, le=65535)
+    mail_starttls: bool = True
+    mail_username: str | None = None
+    mail_password: str | None = None
+    admin_url: str = "http://localhost:3001"
+    tenant_invitation_expire_hours: int = Field(default=72, ge=1, le=720)
 
     # Redis — 留空则禁用 Redis 与缓存
     redis_url: str | None = None
@@ -81,6 +92,10 @@ class Settings(BaseSettings):
             errors.append("APP_DATABASE_URL 必须使用 PostgreSQL")
         if not self.log_json:
             errors.append("APP_LOG_JSON 必须为 true，生产环境需输出 JSON 结构化日志")
+        if self.mail_backend == "console":
+            errors.append("APP_MAIL_BACKEND 生产环境必须为 smtp，避免邀请 token 进入日志")
+        if not self.admin_url.startswith("https://"):
+            errors.append("APP_ADMIN_URL 生产环境必须使用 HTTPS")
 
         if errors:
             raise ValueError("检测到不安全的生产配置：\n- " + "\n- ".join(errors))

@@ -1,5 +1,5 @@
-.PHONY: help doctor install dev lint typecheck test build web-dev \
-        web-lint web-typecheck web-build api-install api-dev api-worker api-crawler-dispatcher api-lint api-lint-fix api-format \
+.PHONY: help doctor install dev lint typecheck test build web-dev admin-dev \
+        web-lint web-typecheck web-build admin-lint admin-typecheck admin-build api-install api-dev api-worker api-crawler-dispatcher api-crawler-scheduler api-lint api-lint-fix api-format \
         api-format-check api-typecheck api-test api-cov api-ci api-check-ai api-test-up \
         api-test-down api-migrate api-revision api-docker-build api-docker-run harness-check \
         harness-eval clean
@@ -17,10 +17,15 @@ help:
 	@echo "  web-lint            Run web ESLint"
 	@echo "  web-typecheck       Run web TypeScript check"
 	@echo "  web-build           Build web app"
+	@echo "  admin-dev           Run Next.js admin dev server"
+	@echo "  admin-lint          Run admin ESLint"
+	@echo "  admin-typecheck     Run admin TypeScript check"
+	@echo "  admin-build         Build admin app"
 	@echo "  api-install         Install API dependencies"
 	@echo "  api-dev             Run API dev server with --reload"
 	@echo "  api-worker          Run the Hatchet Cloud worker"
 	@echo "  api-crawler-dispatcher  Dispatch pending crawler jobs to Hatchet"
+	@echo "  api-crawler-scheduler   Create crawler jobs from due Cron schedules"
 	@echo "  api-lint            Run API ruff check"
 	@echo "  api-lint-fix        Run API ruff check --fix"
 	@echo "  api-format          Run API ruff format"
@@ -73,6 +78,18 @@ web-typecheck:
 web-build:
 	pnpm --filter @rapid-template/web build
 
+admin-dev:
+	pnpm --filter @rapid-template/admin dev
+
+admin-lint:
+	pnpm --filter @rapid-template/admin lint
+
+admin-typecheck:
+	pnpm --filter @rapid-template/admin typecheck
+
+admin-build:
+	pnpm --filter @rapid-template/admin build
+
 api-install:
 	$(MAKE) -C apps/api install
 
@@ -84,6 +101,9 @@ api-worker:
 
 api-crawler-dispatcher:
 	$(MAKE) -C apps/api crawler-dispatcher
+
+api-crawler-scheduler:
+	$(MAKE) -C apps/api crawler-scheduler
 
 api-lint:
 	$(MAKE) -C apps/api lint

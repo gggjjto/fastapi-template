@@ -1,5 +1,5 @@
-.PHONY: help install dev worker crawler-dispatcher lint lint-fix format format-check typecheck test cov ci check-ai \
-        test-up test-down migrate revision docker-build docker-run clean
+.PHONY: help install dev worker crawler-dispatcher crawler-scheduler lint lint-fix format format-check typecheck test cov ci check-ai \
+        test-up test-down migrate revision compose-up compose-operations compose-migrate docker-build docker-run clean
 
 help:
 	@echo "Available API targets:"
@@ -7,6 +7,7 @@ help:
 	@echo "  dev            Run dev server with --reload"
 	@echo "  worker         Run the Hatchet Cloud worker"
 	@echo "  crawler-dispatcher  Dispatch pending crawler jobs to Hatchet"
+	@echo "  crawler-scheduler   Create crawler jobs from due Cron schedules"
 	@echo "  lint           Run ruff check"
 	@echo "  lint-fix       Run ruff check --fix"
 	@echo "  format         Run ruff format"
@@ -20,6 +21,9 @@ help:
 	@echo "  test-down      Stop and remove test containers"
 	@echo "  migrate        Apply Alembic migrations"
 	@echo "  revision m=... Autogenerate Alembic revision"
+	@echo "  compose-up     Start API, PostgreSQL, and Redis"
+	@echo "  compose-operations  Start worker, dispatcher, and scheduler too"
+	@echo "  compose-migrate  Run the one-shot Compose migration service"
 	@echo "  docker-build   Build Docker image"
 	@echo "  docker-run     Run Docker image on :8000"
 	@echo "  clean          Remove caches and build artefacts"
@@ -35,6 +39,9 @@ worker:
 
 crawler-dispatcher:
 	uv run python -m app.crawler.runtime.dispatcher
+
+crawler-scheduler:
+	uv run python -m app.crawler.runtime.scheduler
 
 lint:
 	uv run ruff check .
@@ -74,15 +81,24 @@ migrate:
 revision:
 	uv run alembic revision --autogenerate -m "$(m)"
 
+compose-up:
+	docker compose up
+
+compose-operations:
+	docker compose --profile operations up
+
+compose-migrate:
+	docker compose --profile tools run --rm migrate
+
 docker-build:
-	docker build -t fastapi-template:local .
+	docker build -t rapid-template-api:local .
 
 docker-run:
 	docker run --rm -p 8000:8000 \
 		-e APP_JWT_SECRET=local-dev \
 		-e APP_DATABASE_URL=sqlite+aiosqlite:///./app.db \
 		-e APP_DB_CREATE_TABLES_ON_STARTUP=true \
-		fastapi-template:local
+		rapid-template-api:local
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage coverage.xml htmlcov \

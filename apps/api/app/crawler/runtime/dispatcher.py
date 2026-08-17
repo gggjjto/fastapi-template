@@ -9,7 +9,7 @@ from hatchet_sdk import Hatchet
 from hatchet_sdk.exceptions import IdempotencyCollisionError
 
 from app.core.config import get_settings
-from app.crawler.domain.constants import LEASE_SECONDS
+from app.crawler.domain.constants import LEASE_SECONDS, CrawlDispatchState, CrawlJobStatus
 from app.crawler.domain.schemas import CrawlTaskInput
 from app.crawler.persistence.repository import CrawlerRepository, LeasedCrawlJob
 from app.crawler.runtime.runner import create_crawl_task
@@ -25,10 +25,21 @@ class CrawlTaskDispatcher(Protocol):
 async def dispatch_once(
     *, repository: CrawlerRepository, task: CrawlTaskDispatcher, batch_size: int = 100
 ) -> int:
-    jobs = await repository.lease_pending_jobs(limit=batch_size, lease_seconds=LEASE_SECONDS)
+    batch = await repository.lease_pending_jobs(limit=batch_size, lease_seconds=LEASE_SECONDS)
     await repository.session.commit()
+    for exhausted_job in batch.exhausted:
+        logger.error(
+            "crawler.dispatch.lease_exhausted",
+            crawl_job_id=str(exhausted_job.id),
+            handler_name=exhausted_job.handler_name,
+            target_host=exhausted_job.target_host,
+            attempt=exhausted_job.dispatch_attempts,
+            job_age_ms=exhausted_job.job_age_ms,
+            error_category="transient",
+            error_code="DISPATCH_LEASE_EXHAUSTED",
+        )
     dispatched = 0
-    for job in jobs:
+    for job in batch.leased:
         if await _dispatch_job(repository, task, job):
             dispatched += 1
     return dispatched
@@ -38,82 +49,105 @@ async def _dispatch_job(
     repository: CrawlerRepository, task: CrawlTaskDispatcher, job: LeasedCrawlJob
 ) -> bool:
     start = time.perf_counter()
-    task_input = CrawlTaskInput(
-        crawl_job_id=job.id,
-        tenant_id=job.tenant_id,
-        target_url_id=job.target_url_id,
-        target_host=job.target_host,
-    )
+    task_input = CrawlTaskInput(crawl_job_id=job.id)
     try:
         run = await task.aio_run(input=task_input, wait_for_result=False)
         run_id = str(getattr(run, "workflow_run_id", getattr(run, "run_id", run)))
     except IdempotencyCollisionError as exc:
         run_id = exc.existing_run_external_id
     except Exception as exc:
-        terminal = await repository.record_dispatch_failure(
-            job_id=job.id, tenant_id=job.tenant_id, error=str(exc)
+        return await _record_dispatch_failure(
+            repository,
+            job,
+            error=str(exc),
+            started_at=start,
         )
-        await repository.session.commit()
-        (logger.error if terminal else logger.warning)(
-            "crawler.job.failed" if terminal else "crawler.job.retrying",
-            crawl_job_id=str(job.id),
-            handler_name=job.handler_name,
-            target_host=job.target_host,
-            dispatch_attempt=job.dispatch_attempts,
-            duration_ms=round((time.perf_counter() - start) * 1000, 2),
-            error_category="transient",
-            error_code="DISPATCH_FAILED",
-        )
-        return False
 
     if not run_id:
-        terminal = await repository.record_dispatch_failure(
-            job_id=job.id,
-            tenant_id=job.tenant_id,
+        return await _record_dispatch_failure(
+            repository,
+            job,
             error="Hatchet returned an empty run id",
+            started_at=start,
         )
-        await repository.session.commit()
-        (logger.error if terminal else logger.warning)(
-            "crawler.job.failed" if terminal else "crawler.job.retrying",
-            crawl_job_id=str(job.id),
-            handler_name=job.handler_name,
-            target_host=job.target_host,
-            dispatch_attempt=job.dispatch_attempts,
-            duration_ms=round((time.perf_counter() - start) * 1000, 2),
-            error_category="transient",
-            error_code="DISPATCH_FAILED",
-        )
-        return False
 
-    marked = await repository.mark_dispatched(
+    outcome = await repository.mark_dispatched(
         job_id=job.id,
         tenant_id=job.tenant_id,
         hatchet_run_id=run_id,
     )
     await repository.session.commit()
-    if marked:
-        logger.info(
-            "crawler.job.dispatched",
+    if outcome is None:
+        logger.warning(
+            "crawler.dispatch.missing",
             crawl_job_id=str(job.id),
             hatchet_run_id=run_id,
             handler_name=job.handler_name,
             target_host=job.target_host,
-            dispatch_attempt=job.dispatch_attempts,
+            attempt=job.dispatch_attempts,
+            duration_ms=round((time.perf_counter() - start) * 1000, 2),
+        )
+        return False
+    if outcome.dispatch_state == CrawlDispatchState.DISPATCHED:
+        logger.info(
+            "crawler.dispatch.succeeded",
+            crawl_job_id=str(job.id),
+            hatchet_run_id=run_id,
+            handler_name=job.handler_name,
+            target_host=job.target_host,
+            attempt=job.dispatch_attempts,
             duration_ms=round((time.perf_counter() - start) * 1000, 2),
         )
     else:
         logger.error(
-            "crawler.job.failed",
+            "crawler.dispatch.failed",
             crawl_job_id=str(job.id),
             hatchet_run_id=run_id,
             handler_name=job.handler_name,
             target_host=job.target_host,
-            dispatch_attempt=job.dispatch_attempts,
+            attempt=job.dispatch_attempts,
             duration_ms=round((time.perf_counter() - start) * 1000, 2),
             error_category="permanent",
             error_code="HATCHET_RUN_ID_CONFLICT",
         )
-    return marked
+    return outcome.dispatch_state == CrawlDispatchState.DISPATCHED
+
+
+async def _record_dispatch_failure(
+    repository: CrawlerRepository,
+    job: LeasedCrawlJob,
+    *,
+    error: str,
+    started_at: float,
+) -> bool:
+    outcome = await repository.record_dispatch_failure(
+        job_id=job.id,
+        tenant_id=job.tenant_id,
+        error=error,
+    )
+    await repository.session.commit()
+    if outcome is None:
+        logger.warning(
+            "crawler.dispatch.missing",
+            crawl_job_id=str(job.id),
+            handler_name=job.handler_name,
+            target_host=job.target_host,
+            attempt=job.dispatch_attempts,
+            duration_ms=round((time.perf_counter() - started_at) * 1000, 2),
+        )
+        return False
+    terminal = outcome.status == CrawlJobStatus.FAILED
+    (logger.error if terminal else logger.warning)(
+        "crawler.dispatch.failed" if terminal else "crawler.dispatch.retrying",
+        crawl_job_id=str(job.id),
+        handler_name=job.handler_name,
+        target_host=job.target_host,
+        attempt=job.dispatch_attempts,
+        duration_ms=round((time.perf_counter() - started_at) * 1000, 2),
+        error_category="transient",
+        error_code="DISPATCH_FAILED",
+    )
+    return False
 
 
 async def run_dispatcher() -> None:

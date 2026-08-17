@@ -8,13 +8,7 @@ class ErrorCode:
     PERMISSION_DENIED = "AUTH_PERMISSION_DENIED"
 
 
-class Permission:
-    """auth 域权限码，格式 resource:action。"""
-
-    ROLES_READ = "roles:read"
-    ROLES_MANAGE = "roles:manage"
-
-
 class RoleName:
-    ADMIN = "admin"
+    PLATFORM_ADMIN = "platform_admin"
+    ADMIN = PLATFORM_ADMIN
     USER = "user"

@@ -27,6 +27,7 @@ make build
 make api-dev
 make api-worker
 make api-crawler-dispatcher
+make api-crawler-scheduler
 make api-lint
 make api-format-check
 make api-typecheck
@@ -34,7 +35,11 @@ make api-test
 make api-ci
 make api-check-ai
 
-# Frontend
+# Frontends
+make admin-dev
+make admin-lint
+make admin-typecheck
+make admin-build
 make web-dev
 make web-lint
 make web-typecheck
@@ -58,7 +63,8 @@ Run one API test from `apps/api` with
 - `apps/api/app/` — domain-oriented FastAPI application. Routers handle HTTP,
   services own business logic, and repositories own persistence.
 - `apps/api/tests/` — integration tests using the real app, PostgreSQL, and Redis.
-- `apps/web/` — Next.js workspace console.
+- `apps/admin/` — Next.js management console and browser BFF.
+- `apps/web/` — minimal Next.js business frontend.
 - [`docs/architecture.md`](docs/architecture.md) — repository and runtime boundaries.
 - [`docs/backend.md`](docs/backend.md) — API, data, authentication, and crawler contracts.
 - [`docs/harness-engineering.md`](docs/harness-engineering.md) — agent Harness

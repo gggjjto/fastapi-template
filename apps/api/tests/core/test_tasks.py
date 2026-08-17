@@ -12,7 +12,6 @@ from typing import Any
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-from pydantic import ValidationError
 
 
 @pytest.fixture(autouse=True)
@@ -34,34 +33,7 @@ def _load_worker_module(monkeypatch: pytest.MonkeyPatch) -> Any:
     return importlib.reload(worker_module)
 
 
-def test_example_task_input_requires_message(monkeypatch: pytest.MonkeyPatch) -> None:
-    worker_module = _load_worker_module(monkeypatch)
-
-    with pytest.raises(ValidationError):
-        worker_module.ExampleTaskInput()
-
-
-def test_example_task_input_serializes_message(monkeypatch: pytest.MonkeyPatch) -> None:
-    worker_module = _load_worker_module(monkeypatch)
-
-    task_input = worker_module.ExampleTaskInput(message="hello")
-
-    assert task_input.model_dump() == {"message": "hello"}
-
-
-async def test_run_example_task_returns_transformed_output(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    worker_module = _load_worker_module(monkeypatch)
-
-    result = await worker_module.run_example_task(
-        worker_module.ExampleTaskInput(message="hello"),
-    )
-
-    assert result == worker_module.ExampleTaskOutput(transformed_message="HELLO")
-
-
-def test_create_worker_registers_example_task_with_expected_capacity(
+def test_create_worker_registers_crawl_task_with_expected_capacity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     worker_module = _load_worker_module(monkeypatch)
@@ -94,9 +66,9 @@ def test_create_worker_registers_example_task_with_expected_capacity(
     assert result is created_worker
     assert calls == [
         {
-            "name": "fastapi-template-worker",
+            "name": "rapid-template-worker",
             "slots": 10,
-            "workflows": [worker_module.example_task, worker_module.crawl_task],
+            "workflows": [worker_module.crawl_task],
             "kwargs": {},
         }
     ]

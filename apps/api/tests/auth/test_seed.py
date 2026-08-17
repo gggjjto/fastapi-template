@@ -6,6 +6,7 @@ from app.auth import constants as auth_constants
 from app.auth.models import Permission, Role, RolePermission
 from app.auth.seed import ALL_PERMISSIONS, ensure_default_rbac
 from app.db.session import AsyncSessionLocal
+from app.users import constants as users_constants
 
 
 async def _permission_codes() -> set[str]:
@@ -34,6 +35,7 @@ async def _role_permission_codes(role_name: str) -> set[str]:
 
 
 async def test_seed_creates_permissions_roles_and_bindings() -> None:
+    assert ALL_PERMISSIONS == [users_constants.Permission.READ]
     async with AsyncSessionLocal() as session:
         await ensure_default_rbac(session)
 

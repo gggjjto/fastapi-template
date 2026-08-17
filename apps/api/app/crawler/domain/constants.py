@@ -10,10 +10,11 @@ class CrawlJobStatus(StrEnum):
     RETRYING = "retrying"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
     @classmethod
     def terminal(cls) -> set[CrawlJobStatus]:
-        return {cls.SUCCEEDED, cls.FAILED}
+        return {cls.SUCCEEDED, cls.FAILED, cls.CANCELLED}
 
 
 class CrawlDispatchState(StrEnum):
@@ -38,3 +39,7 @@ MAX_EXECUTION_ATTEMPTS = 3
 class ErrorCode:
     CRAWL_JOB_CONFLICT = "CRAWL_JOB_CONFLICT"
     CRAWL_TARGET_NOT_FOUND = "CRAWL_TARGET_NOT_FOUND"
+    CRAWL_JOB_NOT_FOUND = "CRAWL_JOB_NOT_FOUND"
+    CRAWL_JOB_INVALID_STATE = "CRAWL_JOB_INVALID_STATE"
+    CRAWL_CANCELLATION_UNAVAILABLE = "CRAWL_CANCELLATION_UNAVAILABLE"
+    CRAWL_HANDLER_NOT_FOUND = "CRAWL_HANDLER_NOT_FOUND"

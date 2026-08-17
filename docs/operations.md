@@ -3,32 +3,42 @@ doc_type: runbook
 status: active
 authority: supporting
 scope: runtime-and-delivery
-last_reviewed: 2026-08-12
+last_reviewed: 2026-08-17
 ---
 
 # 运行与发布
 
 ## 本地 Compose
 
-`apps/api/docker-compose.yml` 提供 API、worker、crawler dispatcher、PostgreSQL 16 和 Redis 7。它面向开发：挂载源码并为 API 启用 reload，不是生产编排文件。
+`apps/api/docker-compose.yml` 的默认 profile 只启动 API、PostgreSQL 16 和 Redis 7。它面向开发：挂载源码并为 API 启用 reload，不是生产编排文件。
 
 ```bash
 cd apps/api
 docker compose up
 ```
 
-数据库 migration 需要显式执行；Compose 不替代 Alembic。
+Worker、dispatcher 和 scheduler 是独立进程，通过 operations profile 启动：
+
+```bash
+docker compose --profile operations up
+```
+
+数据库 migration 需要显式执行；Compose 中的 one-shot service 仍然调用 Alembic：
+
+```bash
+docker compose --profile tools run --rm migrate
+```
 
 ## 容器镜像
 
-`apps/api/Dockerfile` 使用多阶段构建、非 root 用户和 HTTP healthcheck。镜像默认只启动 API；worker 与 dispatcher 通过覆盖 command 复用镜像。
+`apps/api/Dockerfile` 基于 Python 3.12，使用多阶段构建、非 root 用户和 HTTP healthcheck。镜像默认只启动 API；worker、dispatcher 与 scheduler 通过覆盖 command 复用镜像。
 
 ```bash
 make api-docker-build
 make api-docker-run
 ```
 
-生产环境必须分别运行 API、worker 和 dispatcher，并由平台注入 secrets。不要保留开发 volume 或 `--reload`。
+生产环境必须分别运行 API、worker、dispatcher 和 scheduler，并由平台注入 secrets。不要保留开发 volume 或 `--reload`。
 
 ## CI
 
@@ -37,17 +47,15 @@ make api-docker-run
 - Ruff 与格式检查；
 - AI workflow guard 与确定性 Harness evals；
 - mypy；
-- Web lint、typecheck、build；
-- pip-audit 与 Bandit；
+- Admin/Web lint、typecheck、build；
+- 从 `uv.lock` 导出的生产依赖执行 pip-audit，并运行 Bandit；
 - PostgreSQL/Redis 集成测试与 coverage；
-- Alembic upgrade 和 downgrade；
+- Alembic upgrade、model drift check、单步 downgrade 和重新 upgrade；
 - Docker build、smoke test 与 Trivy HIGH/CRITICAL 扫描。
 
 ## 发布
 
-`.github/workflows/release.yml` 在 `v*.*.*` tag 或手动输入 tag 时生成 GitHub Release 和 changelog。
-
-当前发布流程不会推送容器镜像、部署环境、生成 SBOM、签名制品或自动执行生产 migration。不要在文档或 UI 中声称这些能力已经存在。
+仓库当前没有发布工作流，因为还没有需要发布的稳定制品。需要推送容器镜像或部署环境时，再增加与真实 registry、环境审批、SBOM、签名和回滚策略对应的流程。
 
 ## 生产检查
 
@@ -59,7 +67,24 @@ make api-docker-run
 
 ## Crawler 可诊断查询
 
-`crawl_jobs` 的 `dispatched_at`、`started_at`、`finished_at` 分别记录首次派发、首次执行和进入终态的时间。以下 PostgreSQL 查询可直接接入所选监控平台；阈值应按实际抓取周期调整。
+`crawl_jobs` 的 `dispatched_at`、`started_at`、`finished_at` 分别记录首次派发、首次执行和进入终态的时间。`finished_at` 有独立索引，支持以下按完成时间窗口过滤的 PostgreSQL 查询；阈值应按实际抓取周期调整。
+
+生命周期日志按阶段使用不同事件名，避免把派发耗时、执行耗时和任务存活时间混为同一指标：
+
+| 事件 | 含义 | 时长字段 |
+| --- | --- | --- |
+| `crawler.job.created` | 任务事务已提交 | 无 |
+| `crawler.dispatch.succeeded` | 本次 Hatchet 提交已持久化 | `duration_ms`：本次提交耗时 |
+| `crawler.dispatch.retrying` | 本次提交失败，重试状态已持久化 | `duration_ms`：本次提交耗时 |
+| `crawler.dispatch.failed` | 本次提交进入终态失败且已持久化 | `duration_ms`：本次提交耗时 |
+| `crawler.dispatch.lease_exhausted` | 最终租约过期且终态已持久化 | `job_age_ms`：创建到终态的总时长 |
+| `crawler.dispatch.missing` | 已租用任务在提交结果时不存在 | `duration_ms`：本次提交耗时 |
+| `crawler.execution.started` | 执行尝试已标记为运行中 | 无 |
+| `crawler.execution.retrying` | 本次执行进入重试且已持久化 | `duration_ms`：本次执行尝试耗时 |
+| `crawler.execution.succeeded` | 本次执行成功且已持久化 | `duration_ms`：本次执行尝试耗时 |
+| `crawler.execution.failed` | 本次执行进入终态失败且已持久化 | `duration_ms`：本次执行尝试耗时 |
+
+所有带 `attempt` 的事件都表示所属阶段的当前尝试次数；公共维度为 `crawl_job_id`、`handler_name` 和 `target_host`。终态日志只在对应事务提交成功后发出。
 
 ```sql
 -- 当前状态分布
@@ -94,7 +119,7 @@ WHERE finished_at >= now() - interval '1 hour';
 -- 最近一小时失败分类
 SELECT error_category, error_code, count(*) AS failures
 FROM crawl_jobs
-WHERE status = 'failed' AND finished_at >= now() - interval '1 hour'
+WHERE status IN ('failed', 'cancelled') AND finished_at >= now() - interval '1 hour'
 GROUP BY error_category, error_code;
 
 -- 按 handler / host 统计最近一小时失败率

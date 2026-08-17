@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import os
 import shutil
 import subprocess
@@ -11,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = ROOT / "apps" / "api"
-REQUIRED_TOOLS = ("python>=3.12", "uv", "docker")
+REQUIRED_TOOLS = ("python>=3.12", "uv", "node", "pnpm", "docker")
 
 
 @dataclass(frozen=True)
@@ -155,20 +154,9 @@ def render_results(results: Sequence[CheckResult]) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Check local development prerequisites.")
-    parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Return non-zero when any recommended local setup check fails.",
-    )
-    args = parser.parse_args(argv)
-
     results = collect_checks()
     print(render_results(results))
-
-    if args.strict and any(not result.ok for result in results):
-        return 1
-    return 0
+    return int(any(not result.ok for result in results))
 
 
 if __name__ == "__main__":

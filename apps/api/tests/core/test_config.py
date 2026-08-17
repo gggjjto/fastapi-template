@@ -13,6 +13,8 @@ _VALID_PROD: dict[str, object] = {
     "db_create_tables_on_startup": False,
     "database_url": "postgresql+asyncpg://user:pass@db:5432/app",
     "log_json": True,
+    "mail_backend": "smtp",
+    "admin_url": "https://admin.example.com",
 }
 
 

@@ -3,22 +3,26 @@ doc_type: convention
 status: active
 authority: normative
 scope: nextjs-frontend
-last_reviewed: 2026-08-12
+last_reviewed: 2026-08-17
 ---
 
 # 前端边界
 
-`apps/web` 是 Next.js 16、React 19、Tailwind CSS 4 的 App Router 应用。
+前端由两个独立的 Next.js 16、React 19、Tailwind CSS 4 App Router 应用组成：
+
+- `apps/admin`：管理后台与浏览器 BFF。
+- `apps/web`：面向业务的空白应用骨架。
 
 ## 当前范围
 
-- 只有根页面与 layout。
-- 页面是静态 Launch Console，展示 workspace 与质量门禁。
-- 没有 API 请求、认证流程、表单、客户端状态或动态路由。
-- 没有组件测试或端到端测试；`test` 当前等价于 lint + typecheck。
-- Web 可以在 API 未运行时独立启动。
+- `apps/admin` 提供登录、当前用户、健康状态、租户/成员/邀请，以及 Crawler 目标和任务管理页面。
+- Admin Route Handlers 代理后端 API，并使用 HttpOnly Cookie 保存 access/refresh token；修改请求执行同源检查。
+- `apps/web` 当前只有欢迎页与 layout，等待真实业务功能。
+- 不引入全局状态库或 UI kit，页面使用原生 `fetch`、React state 和现有 CSS。
+- 尚无浏览器端到端测试；Admin 使用 Node 内置测试覆盖 BFF 安全边界，业务 Web 的 `test` 等价于 lint + typecheck。
+- 两个应用都可以在 API 未运行时独立启动。
 
-不要把页面上的 `ready` 或 `active` 标签解释成运行时探测结果，它们是静态展示内容。
+开发端口：业务 Web 使用 `3000`，Admin 使用 `3001`。
 
 ## 共享配置
 
@@ -26,7 +30,7 @@ last_reviewed: 2026-08-12
 
 ## 扩展顺序
 
-出现真实业务页面时按需增加：
+业务 Web 出现真实页面时按需增加：
 
 1. 环境变量与 typed API client；
 2. API loading/error/empty states；
