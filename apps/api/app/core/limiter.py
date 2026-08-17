@@ -7,12 +7,16 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from app.core.config import get_settings
 from app.core.error_codes import CommonErrorCode
 
 # 全局限流器，通过 @limiter.limit("N/period") 装饰器应用到具体接口
 # 默认以客户端 IP 作为限流 key；如需按用户维度限流，可将 get_remote_address
 # 替换为自定义函数（例如从 token 中提取 user_id）
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=get_settings().redis_url or "memory://",
+)
 
 
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:

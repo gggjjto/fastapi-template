@@ -1,3 +1,5 @@
+name: rapid-template
+
 services:
 
   # ── Application ───────────────────────────────────────────────────────────
@@ -22,6 +24,7 @@ services:
 
   # ── Worker (Hatchet Cloud tasks) ─────────────────────────────────────────
   worker:
+    profiles: [operations]
     build: .
     env_file:
       - .env
@@ -37,6 +40,7 @@ services:
 
   # ── Crawler dispatcher (PostgreSQL outbox -> Hatchet Cloud) ──────────────
   crawler-dispatcher:
+    profiles: [operations]
     build: .
     env_file:
       - .env
@@ -49,6 +53,36 @@ services:
     volumes:
       - .:/app
     command: uv run python -m app.crawler.runtime.dispatcher
+
+  # ── Crawler scheduler (Cron -> PostgreSQL jobs) ──────────────────────────
+  crawler-scheduler:
+    profiles: [operations]
+    build: .
+    env_file:
+      - .env
+    environment:
+      APP_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/app
+      APP_DB_CREATE_TABLES_ON_STARTUP: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uv run python -m app.crawler.runtime.scheduler
+
+  # Explicit one-shot migration; run with `docker compose --profile tools run --rm migrate`.
+  migrate:
+    profiles: [tools]
+    build: .
+    env_file:
+      - .env
+    environment:
+      APP_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/app
+      APP_DB_CREATE_TABLES_ON_STARTUP: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uv run alembic upgrade head
 
   # ── PostgreSQL ────────────────────────────────────────────────────────────
   db:

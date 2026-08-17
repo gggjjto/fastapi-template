@@ -36,3 +36,27 @@ async def test_refresh_rate_limit(client: AsyncClient) -> None:
     resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert resp.status_code == 429
     assert resp.json()["code"] == "RATE_LIMITED"
+
+
+async def test_public_signup_rate_limit(client: AsyncClient) -> None:
+    for index in range(10):
+        resp = await client.post(
+            "/api/v1/users",
+            json={
+                "email": f"signup-limit-{index}@example.com",
+                "full_name": "Signup Limit",
+                "password": "Password123!",
+            },
+        )
+        assert resp.status_code == 201
+
+    resp = await client.post(
+        "/api/v1/users",
+        json={
+            "email": "signup-limit-blocked@example.com",
+            "full_name": "Signup Limit",
+            "password": "Password123!",
+        },
+    )
+    assert resp.status_code == 429
+    assert resp.json()["code"] == "RATE_LIMITED"

@@ -103,14 +103,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint web workspace
-        run: pnpm --filter @rapid-template/web lint
+      - name: Lint JS workspace
+        run: pnpm lint
 
-      - name: Type check web workspace
-        run: pnpm --filter @rapid-template/web typecheck
+      - name: Type check JS workspace
+        run: pnpm typecheck
 
-      - name: Build web workspace
-        run: pnpm --filter @rapid-template/web build
+      - name: Build JS workspace
+        run: pnpm build
 
   security:
     name: Security Scan
@@ -135,7 +135,10 @@ jobs:
 
       - name: Dependency vulnerability scan (pip-audit)
         working-directory: apps/api
-        run: uvx --from pip-audit pip-audit
+        run: |
+          uv export --frozen --no-dev --no-emit-project \
+            --format requirements-txt --output-file "${RUNNER_TEMP}/requirements.txt"
+          uvx --from pip-audit pip-audit --requirement "${RUNNER_TEMP}/requirements.txt"
 
       - name: Static security scan (bandit)
         working-directory: apps/api
@@ -263,9 +266,15 @@ jobs:
         working-directory: apps/api
         run: uv run alembic upgrade head
 
-      - name: Downgrade to base (验证回滚)
+      - name: Check model and migration drift
         working-directory: apps/api
-        run: uv run alembic downgrade base
+        run: uv run alembic check
+
+      - name: Verify one-step downgrade and re-upgrade
+        working-directory: apps/api
+        run: |
+          uv run alembic downgrade -1
+          uv run alembic upgrade head
 
   docker-build:
     name: Docker Build (validate)
@@ -283,7 +292,7 @@ jobs:
           context: apps/api
           push: false
           load: true
-          tags: fastapi-template:ci
+          tags: rapid-template-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -294,12 +303,12 @@ jobs:
             -e APP_JWT_SECRET=ci-smoke \
             -e APP_DATABASE_URL="sqlite+aiosqlite:///./smoke.db" \
             -e APP_DB_CREATE_TABLES_ON_STARTUP=true \
-            fastapi-template:ci python -c "from app.main import app; print(app.title)"
+            rapid-template-api:ci python -c "from app.main import app; print(app.title)"
 
       - name: Scan image vulnerabilities (Trivy)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: fastapi-template:ci
+          image-ref: rapid-template-api:ci
           format: table
           vuln-type: os,library
           severity: HIGH,CRITICAL
