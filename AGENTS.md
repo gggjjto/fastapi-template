@@ -106,3 +106,23 @@ Before reporting completion, run the smallest targeted test that proves the chan
 then the affected lint/type/build gates. Harness changes must pass
 `make harness-check`. If full integration tests cannot run,
 state the missing service and report the next-best checks; never claim an unrun gate.
+
+## Code Review Rules
+
+### Tenant and authentication boundaries
+
+- Flag tenant-owned reads or writes that are not constrained by `tenant_id`, or
+  authorization paths that can expose whether a cross-tenant resource exists.
+  Safe path: enforce tenant scope in the repository query and return `404` across
+  tenant boundaries.
+
+### Crawler safety and lifecycle
+
+- Flag changes that weaken SSRF, redirect, timeout, or response-size protections,
+  or let dispatchers and late runners overwrite terminal job states. Safe path:
+  keep network policy in the shared HTTP client and terminal transitions atomic.
+
+### Data migrations
+
+- Flag model changes without a deployable Alembic upgrade and downgrade, including
+  enum or check-constraint drift and missing data migration for renamed roles.
