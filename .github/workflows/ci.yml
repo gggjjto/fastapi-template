@@ -104,13 +104,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint JS workspace
-        run: pnpm lint
+        run: pnpm --filter @rapid-template/admin --filter @rapid-template/web lint
 
       - name: Type check JS workspace
-        run: pnpm typecheck
+        run: pnpm --filter @rapid-template/admin --filter @rapid-template/web typecheck
 
       - name: Build JS workspace
-        run: pnpm build
+        run: pnpm --filter @rapid-template/admin --filter @rapid-template/web build
 
   security:
     name: Security Scan

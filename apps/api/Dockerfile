@@ -41,6 +41,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     # 每个 CPU 核心对应 1 个 worker，可通过环境变量覆盖
     WEB_CONCURRENCY=1
 
+# 安装基础镜像已发布的安全修复；最终镜像不保留 apt 索引。
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # 创建非 root 用户
 RUN groupadd --system --gid 1001 app \
     && useradd --system --uid 1001 --gid app --home /app --shell /usr/sbin/nologin app
