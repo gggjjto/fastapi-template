@@ -97,3 +97,9 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      # Docker and CI deliberately share the same Python minor version.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
